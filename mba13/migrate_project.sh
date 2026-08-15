@@ -48,7 +48,10 @@ log() {
 }
 
 rsync_ssh() {
-  rsync -avz "$1" -e "ssh -i $AM6_KEY" "$2" "$3"
+  local extra="$1" src="$2" dst="$3"
+  local opts=(-avz)
+  [[ -n "$extra" ]] && opts+=("$extra")
+  rsync "${opts[@]}" -e "ssh -i $AM6_KEY" "$src" "$dst"
 }
 
 log "# Migration run: $(date -Iseconds)"
