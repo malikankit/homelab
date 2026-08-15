@@ -123,3 +123,59 @@ firewall rule is interface-based so it doesn't care):
   ```
   ssh -o PubkeyAuthentication=no -o PreferredAuthentications=password <user>@100.x.y.z
   ```
+
+Automated as `test_ssh_setup.sh` (run from the client machine — see that
+file for usage).
+
+## Execution log — 2026-08-14
+
+Ran on `am6`. Starting state: Tailscale already installed and logged into
+the tailnet (`tailscale status` showed the device online at `100.78.110.5`,
+with peers `am-ma` and `ams-mbp16` visible); `openssh-server` not yet
+installed.
+
+- **a) / b) Install + login** — already done prior to this session.
+  Confirmed via `tailscale status` (online, peers visible) and
+  `tailscale debug prefs` (`"RunSSH": false` — Tailscale SSH was never
+  turned on).
+- **c) openssh-server + firewall**:
+  - `sudo apt install -y openssh-server`, `sudo systemctl enable --now ssh`
+    — confirmed listening on `0.0.0.0:22` (`ss -tlnp`).
+  - Wrote `ufw_rules.sh`, ran `sudo ./ufw_rules.sh`. Result
+    (`ufw status verbose`): `22/tcp on tailscale0 ALLOW IN Anywhere` (and
+    the `(v6)` equivalent) only; default deny incoming / allow outgoing;
+    ufw active.
+- **d) Key-only auth**:
+  - Client public key (from the `ams-mbp16` machine) added to
+    `~/.ssh/authorized_keys` on `am6`.
+  - Wrote `sshd_hardening.sh`, ran `sudo ./sshd_hardening.sh`. It backed up
+    `sshd_config` and wrote the drop-in
+    `/etc/ssh/sshd_config.d/00-tailnet-hardening.conf` (backups under
+    `/etc/ssh/sshd_config.d.backups/`). Ran twice (21:37:22, then
+    21:38:58) — the second run was after fixing a false-positive in the
+    script's own verification step: `ChallengeResponseAuthentication` is a
+    deprecated alias for `KbdInteractiveAuthentication` on modern OpenSSH
+    and `sshd -T` never reports it as a separate keyword, so checking for
+    it standalone always failed even when correctly applied. The actual
+    config was correct on the first run; only the verification logic
+    needed the fix.
+  - Confirmed applied: `PubkeyAuthentication yes`, `PasswordAuthentication
+    no`, `KbdInteractiveAuthentication no`, `AuthenticationMethods
+    publickey`, `PermitRootLogin no`. `RunSSH` reconfirmed `false`.
+- **Verification** — from tailnet peer `ams-mbp16` (`100.87.74.44`), via
+  `test_ssh_setup.sh`: 3/4 tests passed (key auth over Tailscale IP;
+  password auth refused; keyboard-interactive refused). Test 4
+  (LAN-unreachable) was skipped — `ams-mbp16` isn't on the same LAN as
+  `am6`, so `REMOTE_LAN_HOST` was left unset. The `ufw status verbose`
+  output already confirms the rule is scoped to `tailscale0` only, but an
+  end-to-end LAN-blocked test hasn't been run — optional follow-up if a
+  same-LAN device becomes available to test from.
+  - Cross-checked against server-side `journalctl -u ssh`: password logins
+    from `ams-mbp16` succeeded at 21:25/21:29 (before hardening was
+    applied — expected, that was a pre-hardening connectivity check), then
+    after the 21:37/21:38 restarts, pubkey logins succeeded (21:40, 21:44)
+    and two connection attempts were closed pre-auth immediately after
+    (21:44:39–40) — matching the rejected password/keyboard-interactive
+    test cases.
+- Committed and pushed: `7a93dcd` "Add Tailnet-only, key-only SSH setup
+  docs and scripts" on `main`.
