@@ -3,7 +3,7 @@
 This repo documents setup across all machines in the homelab. Per-machine
 detail lives in each machine's own subfolder (`geekom/`, `mba13/`,
 `mbp16/`); this file is the cross-machine picture — network topology,
-trust model, and SSH access map.
+trust model, and SSH access map. Open follow-ups live in `TODO.md`.
 
 ## Machines
 
