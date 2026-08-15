@@ -26,7 +26,7 @@ fi
 
 echo "== 1) Masking systemd sleep targets =="
 systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target
-systemctl status sleep.target suspend.target hibernate.target hybrid-sleep.target --no-pager 2>&1 | grep -E "●|Loaded"
+systemctl status sleep.target suspend.target hibernate.target hybrid-sleep.target --no-pager 2>&1 | grep -E "●|Loaded" || true
 
 echo
 echo "== 2) logind.conf: explicit IdleAction=ignore =="

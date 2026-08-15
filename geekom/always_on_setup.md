@@ -44,6 +44,20 @@ incidental, in three layers (most to least fundamental):
 
 Run: `sudo ./disable_sleep.sh` (idempotent).
 
+**Caution if running this over a local GUI session:** step 2
+(`systemctl restart systemd-logind`) can knock out an *active local*
+GNOME session — logind restarting drops the running login session, and
+you can land on a text console (tty/getty) instead of the desktop until
+you switch VTs or restart `gdm`. This happened once during initial setup;
+recoverable (VT switch, `sudo systemctl restart gdm`, or physical reboot
+as a last resort — no data risk from the script itself), but avoid running
+this script from the physical console when possible, or expect a
+momentary GUI hiccup and know how to recover if you do.
+
+Verifying it worked: `sudo systemctl suspend` should fail with
+`Access denied` — that's logind refusing the call because `suspend.target`
+is masked, which is the intended result, not an error.
+
 ## Layer 2: SSH keepalive — `ClientAliveInterval`/`ClientAliveCountMax`
 
 Added to the sshd hardening drop-in (`sshd_hardening.sh` →

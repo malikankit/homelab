@@ -1,0 +1,58 @@
+am@am6:~$   grep ClientAlive /etc/ssh/sshd_config.d/00-tailnet-hardening.conf
+am@am6:~$ cd code
+am@am6:~/code$ ls
+homelab
+am@am6:~/code$ cd homelab/
+am@am6:~/code/homelab$ ls
+HOMELAB.md  TODO.md  geekom  knowledge    mba13  mbp16
+am@am6:~/code/homelab$ cd geekom/
+am@am6:~/code/homelab/geekom$ ./sshd_hardening.sh
+Must run as root: sudo ./sshd_hardening.sh
+am@am6:~/code/homelab/geekom$ sudo !!
+sudo ./sshd_hardening.sh
+[sudo: authenticate] Password:
+== a) Found /etc/ssh/sshd_config ==
+
+== b) Current effective values ==
+pubkeyauthentication yes
+passwordauthentication no
+kbdinteractiveauthentication no
+authenticationmethods publickey
+permitrootlogin no
+
+== c) Target values (from /etc/ssh/sshd_config.d/00-tailnet-hardening.conf) ==
+# Managed by sshd_hardening.sh in homelab/geekom — do not hand-edit.
+# Key-only SSH auth. Tailscale SSH stays off (see tailscale_setup.md);
+# network exposure is restricted to the Tailnet via ufw (see ufw_rules.sh).
+PubkeyAuthentication yes
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+ChallengeResponseAuthentication no
+AuthenticationMethods publickey
+PermitRootLogin no
+# Keepalive: proactively detect and drop dead connections (flaky wifi,
+# NAT timeouts) rather than leaving zombie sessions. See
+# always_on_setup.md. Sends a null packet every 60s; drops the session
+# after 3 missed responses (~3 min of unresponsiveness).
+ClientAliveInterval 60
+ClientAliveCountMax 3
+
+== d) Backed up /etc/ssh/sshd_config -> /etc/ssh/sshd_config.d.backups/sshd_config.20260815-160222.bak ==
+   Backed up existing /etc/ssh/sshd_config.d/00-tailnet-hardening.conf -> /etc/ssh/sshd_config.d.backups/00-tailnet-hardening.conf.20260815-160222.bak
+
+== e) Wrote /etc/ssh/sshd_config.d/00-tailnet-hardening.conf ==
+== f) sshd -t: config OK ==
+   ssh service restarted
+
+== f) Confirming applied values ==
+pubkeyauthentication yes
+passwordauthentication no
+kbdinteractiveauthentication no
+authenticationmethods publickey
+permitrootlogin no
+
+CONFIRMED: all directives match target values.
+am@am6:~/code/homelab/geekom$   grep ClientAlive /etc/ssh/sshd_config.d/00-tailnet-hardening.conf
+ClientAliveInterval 60
+ClientAliveCountMax 3
+am@am6:~/code/homelab/geekom$
