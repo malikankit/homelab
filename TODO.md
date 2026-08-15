@@ -61,11 +61,11 @@
   multibit2026) — see `mba13/logs/migrations/`. Two failed and need
   follow-up (below).
 
-- [ ] **Fix failed migrations: `shprod` and `hedgit_archived`.** Both
-  failed via `migrate_project.sh` on 2026-08-16 but left a partial
-  directory behind on am6 (rsync errored partway through, not a clean
-  no-op — don't trust either dir on am6 as complete). `shprod` has
-  noticeably tighter permissions (`750`) than the other projects (`775`),
-  possibly a read-permission issue on some file. Re-run the script for
-  just these two and capture the actual rsync error text (the migration
-  log only records pass/fail, not the error) before retrying.
+- [ ] **Clean migration for `shprod` and `hedgit_archived`.** Both failed
+  via `migrate_project.sh` on 2026-08-16, leaving partial/incomplete
+  directories on am6 (rsync errored partway through). Those partial
+  copies have been deleted from am6 — originals on am-ma are untouched
+  (cleanup was never offered for failed runs). `shprod` has noticeably
+  tighter permissions (`750`) than the other projects (`775`), possibly a
+  read-permission issue on some file — worth capturing the actual rsync
+  error text (the migration log only records pass/fail) before retrying.
