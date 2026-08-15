@@ -48,3 +48,13 @@ For each project being migrated, transfer both:
 ~/.claude/projects/<mangled-path-of-that-project>
 ```
 to the identical paths on the destination machine.
+
+## Automated: `mba13/migrate_project.sh`
+
+Interactive script (run on am-ma) that lists top-level project folders
+under `~/code`, dry-runs + confirms an rsync of both the code and its
+matching session directory to am6, logs a succinct per-project report to
+`mba13/logs/migrations/`, and offers to move a migrated project into
+`~/code/migrated_to_am6/` afterward to declutter — a local move, not a
+deletion. Loops until you're done, so it handles a batch of projects in
+one run.
