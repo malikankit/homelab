@@ -54,10 +54,18 @@
   geekom auto-boots after a real power outage rather than staying off
   until a physical button press. See `geekom/always_on_setup.md`.
 
-- [ ] **Migrate Claude Code sessions and projects from am-ma to geekom.**
-  Pick which folders under am-ma's `~/code/` to migrate, then transfer
-  both the project folder and its matching
-  `~/.claude/projects/<mangled-path>/` directory to the identical
-  absolute path on geekom, over the Tailscale SSH connection, so
-  `/resume` finds the old sessions. See
-  `knowledge/claude_code_session_migration.md` for the mechanics/caveats.
+- [x] **Migrate Claude Code sessions and projects from am-ma to geekom.**
+  Done via `mba13/migrate_project.sh` for 8 projects (ailearning2026,
+  crypto_prices_taxes, eth-portfolio-dashboard, snapshot-tool,
+  full-offline-backup-for-todoist, lecce-libre, ledger-experiment,
+  multibit2026) — see `mba13/logs/migrations/`. Two failed and need
+  follow-up (below).
+
+- [ ] **Fix failed migrations: `shprod` and `hedgit_archived`.** Both
+  failed via `migrate_project.sh` on 2026-08-16 but left a partial
+  directory behind on am6 (rsync errored partway through, not a clean
+  no-op — don't trust either dir on am6 as complete). `shprod` has
+  noticeably tighter permissions (`750`) than the other projects (`775`),
+  possibly a read-permission issue on some file. Re-run the script for
+  just these two and capture the actual rsync error text (the migration
+  log only records pass/fail, not the error) before retrying.
