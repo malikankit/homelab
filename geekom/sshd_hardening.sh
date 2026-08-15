@@ -46,6 +46,12 @@ KbdInteractiveAuthentication no
 ChallengeResponseAuthentication no
 AuthenticationMethods publickey
 PermitRootLogin no
+# Keepalive: proactively detect and drop dead connections (flaky wifi,
+# NAT timeouts) rather than leaving zombie sessions. See
+# always_on_setup.md. Sends a null packet every 60s; drops the session
+# after 3 missed responses (~3 min of unresponsiveness).
+ClientAliveInterval 60
+ClientAliveCountMax 3
 EOF
 
 if [[ $EUID -ne 0 ]]; then

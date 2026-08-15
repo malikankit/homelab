@@ -33,3 +33,31 @@
   `no`). Write `mba13/sshd_hardening.sh` mirroring
   `geekom/sshd_hardening.sh` (backup/apply/verify pattern) and align
   those two directives.
+
+- [x] **geekom: set correct suspend/sleep settings for a home server.**
+  Done — `geekom/disable_sleep.sh` masks the systemd sleep targets, sets
+  an explicit `logind.conf` override, and locks the GNOME dconf settings.
+  See `geekom/always_on_setup.md`.
+
+- [ ] **geekom: decide on LUKS remote-unlock strategy.** Root disk is
+  LUKS-encrypted — on any reboot (crash, power blip, update), geekom has
+  no network stack until someone physically types the passphrase, which
+  defeats "always reachable via Tailscale." Options laid out in
+  `geekom/always_on_setup.md` (Layer 3): TPM2 auto-unlock (convenient,
+  trades away at-rest protection against physical theft-while-off),
+  `dropbear-initramfs` (needs a LAN-local relay device to be useful from
+  outside the LAN — more infra), or accept the risk as-is. Needs a
+  deliberate decision, not a default.
+
+- [ ] **geekom: check BIOS "restore power after AC loss" setting.**
+  Firmware-level, can't be checked/changed from software — confirm
+  geekom auto-boots after a real power outage rather than staying off
+  until a physical button press. See `geekom/always_on_setup.md`.
+
+- [ ] **Migrate Claude Code sessions and projects from am-ma to geekom.**
+  Pick which folders under am-ma's `~/code/` to migrate, then transfer
+  both the project folder and its matching
+  `~/.claude/projects/<mangled-path>/` directory to the identical
+  absolute path on geekom, over the Tailscale SSH connection, so
+  `/resume` finds the old sessions. See
+  `knowledge/claude_code_session_migration.md` for the mechanics/caveats.
