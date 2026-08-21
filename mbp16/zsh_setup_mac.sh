@@ -65,16 +65,23 @@ cat > "$HOME/.zshrc" <<'EOF'
 # Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
 # Initialization code that may require console input (password prompts, [y/n]
 # confirmations, etc.) must go above this block; everything else may go below.
-if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
-  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
-fi
+# Powerlevel10k instant prompt — disabled along with the theme below.
+# Uncomment if re-enabling Powerlevel10k.
+# if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+#   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+# fi
 
 # ═══════════════════════════════════════════════════════
 # Oh My Zsh
 # ═══════════════════════════════════════════════════════
 export ZSH="$HOME/.oh-my-zsh"
 
-ZSH_THEME="powerlevel10k/powerlevel10k"
+# Powerlevel10k disabled in favor of a plain bash-style prompt (see below) —
+# no icons/Nerd Font/terminal-escape-sequence support needed, works
+# identically in every terminal. Set back to "powerlevel10k/powerlevel10k"
+# any time to re-enable it (also uncomment the instant-prompt block above
+# and the source line in the Prompt section below).
+ZSH_THEME=""
 
 plugins=(
   git
@@ -88,10 +95,13 @@ plugins=(
 source $ZSH/oh-my-zsh.sh
 
 # ═══════════════════════════════════════════════════════
-# Powerlevel10k
+# Prompt — plain bash-style: user@host:path$
 # ═══════════════════════════════════════════════════════
-# Run `p10k configure` any time to redo this interactively.
-[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+# Powerlevel10k is still installed (~/.p10k.zsh) but disabled above in
+# favor of this. Re-enable by setting ZSH_THEME back above and
+# uncommenting the line below (plus the instant-prompt block at the top).
+# [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+PROMPT='%n@%m:%~$ '
 
 # ═══════════════════════════════════════════════════════
 # fzf (Ctrl+R history search, Ctrl+T file find, Alt+C cd)
