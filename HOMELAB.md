@@ -41,6 +41,16 @@ now" or "is this device on the tailnet at all." This is why `geekom` and
 `mba13-linux` are hardened that way (see `geekom/tailscale_setup.md`) — the same
 should carry over to `mbp16` too.
 
+**Caveat (2026-08-21): the ufw half of this boundary doesn't currently
+hold.** `tailscaled` inserts its own `ts-input` iptables chain ahead of
+ufw's chains and accepts Tailscale-interface traffic before ufw ever
+runs — confirmed empirically (SSH from an unallowlisted IP succeeded).
+Real reachability today is actually governed by Tailscale's own ACL
+policy (default: allow-all between tailnet devices) plus sshd's
+key-only auth, not by the per-machine ufw allowlist below. See
+`knowledge/tailscale_ufw_bypass.md` for the full writeup and fix
+options — not yet decided, tracked in `TODO.md`.
+
 **Firewall policy: per-machine IP allowlist, not tailnet-wide.** Rather
 than "allow SSH from any device on the tailnet," each machine's firewall
 allows port 22 only from the specific AM-tailnet IPs of the other 2
