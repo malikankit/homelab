@@ -27,7 +27,7 @@ interface, because before a direct connection is established there *is no*
 ## Why it's *not* related to switching tailnets (AM ↔ Zenith)
 
 This came up because it was unclear in hindsight whether this rule was
-added to support switching `am-ma` between the AM and Zenith tailnets
+added to support switching `mba13-linux` between the AM and Zenith tailnets
 remotely. It isn't, and doesn't need to be:
 
 - Switching networks (`tailscale switch`, or logging out of one tailnet

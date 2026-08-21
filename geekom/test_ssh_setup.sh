@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Test script for the Tailnet-only, key-only SSH setup on "am6"
+# Test script for the Tailnet-only, key-only SSH setup on "geekom-linux"
 # (see tailscale_setup.md, ufw_rules.sh, sshd_hardening.sh).
 #
-# RUN THIS FROM THE CLIENT MACHINE — not on am6 itself. Loopback traffic
-# always bypasses ufw's default-deny, so testing from am6 against its own
+# RUN THIS FROM THE CLIENT MACHINE — not on geekom-linux itself. Loopback traffic
+# always bypasses ufw's default-deny, so testing from geekom-linux against its own
 # IPs would not actually exercise the Tailnet-only restriction.
 #
 # Edit the variables below for your setup, then: ./test_ssh_setup.sh
@@ -11,12 +11,12 @@
 set -uo pipefail
 
 # --- Variables — edit these ---
-REMOTE_USER="am"                  # SSH user on am6
-REMOTE_TS_HOST="100.78.110.5"     # am6's Tailscale IP (`tailscale ip -4` on am6)
-REMOTE_LAN_HOST=""                # am6's LAN IP, e.g. 192.168.2.38 — leave
+REMOTE_USER="am"                  # SSH user on geekom-linux
+REMOTE_TS_HOST="100.78.110.5"     # geekom-linux's Tailscale IP (`tailscale ip -4` on geekom-linux)
+REMOTE_LAN_HOST=""                # geekom-linux's LAN IP, e.g. 192.168.2.38 — leave
                                    # blank to skip test 4 (only meaningful
                                    # if THIS client is on the same LAN and
-                                   # NOT reaching am6 via Tailscale)
+                                   # NOT reaching geekom-linux via Tailscale)
 SSH_KEY=""                        # path to private key, or "" for default identity
 CONNECT_TIMEOUT=8
 # --- End variables ---

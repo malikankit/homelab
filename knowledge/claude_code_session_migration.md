@@ -1,6 +1,6 @@
 # Migrating Claude Code sessions between machines
 
-Context: migrating dev folders from am-ma's `~/code/` to geekom's
+Context: migrating dev folders from mba13-linux's `~/code/` to geekom's
 `~/code/`, and wanting to `/resume` the old Claude Code conversations for
 those projects on the new machine.
 
@@ -22,7 +22,7 @@ storage path).
 ## What's required for `/resume` to work on a different machine
 
 1. **The absolute path must match exactly** on the new machine. If a
-   project lives at `/home/am/code/<project>` on am-ma, it needs to land
+   project lives at `/home/am/code/<project>` on mba13-linux, it needs to land
    at that exact same path on geekom (same username, same layout) — not
    just "somewhere under `~/code/`".
 2. **Two things move together, not just the code**:
@@ -51,10 +51,10 @@ to the identical paths on the destination machine.
 
 ## Automated: `mba13/migrate_project.sh`
 
-Interactive script (run on am-ma) that lists top-level project folders
+Interactive script (run on mba13-linux) that lists top-level project folders
 under `~/code`, dry-runs + confirms an rsync of both the code and its
-matching session directory to am6, logs a succinct per-project report to
+matching session directory to geekom-linux, logs a succinct per-project report to
 `mba13/logs/migrations/`, and offers to move a migrated project into
-`~/code/migrated_to_am6/` afterward to declutter — a local move, not a
+`~/code/migrated_to_geekom-linux/` afterward to declutter — a local move, not a
 deletion. Loops until you're done, so it handles a batch of projects in
 one run.

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Disable sleep/suspend on geekom (am6) — this runs as an always-on
+# Disable sleep/suspend on geekom (geekom-linux) — this runs as an always-on
 # SSH dev machine (and later, a web server), reachable via Tailscale from
 # anywhere. It must never suspend on idle. See ../geekom/always_on_setup.md
 # for full rationale (including the LUKS-on-reboot caveat, which this

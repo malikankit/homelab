@@ -33,32 +33,32 @@ Commit: 7a93dcd "Add Tailnet-only, key-only SSH setup docs and scripts"
 5. Homelab-wide overview doc
 
 Added ../HOMELAB.md at the repo root — the 3-machine topology (geekom/
-am6, mba13/am-ma, mbp16/ams-mbp16), the AM vs. Zenith Tailscale trust
+geekom-linux, mba13/mba13-linux, mbp16/mbp16-mac), the AM vs. Zenith Tailscale trust
 distinction (host-level hardening is the real security boundary, not
 tailnet ACLs — matters because Zenith has a different admin and other
 users), the SSH access map, and the SSH key inventory/convention.
 
 6. Dedicated inter-host SSH key
 
-Generated am6_to_tailnet_ed25519 — a key separate from the existing
+Generated geekom-linux_to_tailnet_ed25519 — a key separate from the existing
 GitHub key (id_ed25519, comment github@ankitmalik.in), specifically for
 SSH between homelab machines on the AM tailnet. One key per trust
 boundary, matching the pattern mbp16 already used (separate GitHub /
 Zenith / inter-host keys). Both public keys copied into this folder
-(am6_to_tailnet_ed25519.pub, id_ed25519.pub) for easy copy-paste into
+(geekom-linux_to_tailnet_ed25519.pub, id_ed25519.pub) for easy copy-paste into
 other machines' authorized_keys.
 
 Commit: 4ab8d01 "Add homelab overview doc and geekom's public keys"
 
-7. Reviewed am-ma (mba13, Asahi Linux) and moved to per-machine ufw allowlists
+7. Reviewed mba13-linux (mba13, Asahi Linux) and moved to per-machine ufw allowlists
 
-am-ma already had SSH working, with a stricter ufw policy than geekom's
+mba13-linux already had SSH working, with a stricter ufw policy than geekom's
 initial setup: port 22 allowed only from specific known peer IPs, not
 "any device on the tailnet." Adopted the same policy on geekom — rewrote
-ufw_rules.sh to allow SSH only from am-ma and ams-mbp16's specific
+ufw_rules.sh to allow SSH only from mba13-linux and mbp16-mac's specific
 Tailscale IPs (scoped to the tailscale0 interface), retiring the old
-tailnet-wide rule. Wrote mba13/ufw_rules.sh capturing am-ma's existing
-rules plus the new am6 entry.
+tailnet-wide rule. Wrote mba13/ufw_rules.sh capturing mba13-linux's existing
+rules plus the new geekom-linux entry.
 
 Added the knowledge/ folder with knowledge/tailscale_udp_41641.md,
 documenting why 41641/udp is opened (direct peer-to-peer connections,
@@ -68,16 +68,16 @@ came up when reviewing the rule).
 Commit: 1474bfe "Move to per-machine ufw allowlists, add mba13 script,
 document 41641/udp"
 
-8. TODO.md and am-ma follow-up
+8. TODO.md and mba13-linux follow-up
 
 Created ../TODO.md to track open follow-ups: updating ufw allowlists with
 Zenith IPs once a machine reconnects to that network, investigating a
-Tailscale DNS health warning seen on am-ma, and formalizing am-ma's sshd
+Tailscale DNS health warning seen on mba13-linux, and formalizing mba13-linux's sshd
 hardening into a script (found two gaps vs. geekom's baseline:
 AuthenticationMethods was `any` not `publickey`, PermitRootLogin was
 `prohibit-password` not `no`).
 
-Also updated the local `sham` alias in ~/.bashrc to SSH into am-ma by IP
+Also updated the local `sham` alias in ~/.bashrc to SSH into mba13-linux by IP
 instead of hostname, working around a MagicDNS short-hostname resolution
 issue on geekom (not yet root-caused — tracked in TODO.md).
 
@@ -89,7 +89,7 @@ Commit: 445ffb9 "Add homelab TODO list, link it from HOMELAB.md"
 1. Claude Code session migration notes
 
 Documented how to migrate dev folders + their Claude Code session history
-from am-ma to geekom so `/resume` still works — sessions are keyed to a
+from mba13-linux to geekom so `/resume` still works — sessions are keyed to a
 project's absolute path and stored purely locally
 (~/.claude/projects/<mangled-path>/), so the code folder and its matching
 session directory have to move together to the same absolute path.

@@ -1,4 +1,4 @@
-# geekom (am6): always-on SSH dev machine (+ future web server)
+# geekom (geekom-linux): always-on SSH dev machine (+ future web server)
 
 geekom's role: an always-on home server, reachable over Tailscale SSH from
 anywhere (e.g. working from a cafe), and later hosting some services
@@ -70,7 +70,7 @@ instead of leaving zombies.
 Client-side complement (set this in `~/.ssh/config` on whichever laptop
 connects *from* the cafe, not on geekom):
 ```
-Host am6
+Host geekom-linux
     ServerAliveInterval 60
     ServerAliveCountMax 3
 ```

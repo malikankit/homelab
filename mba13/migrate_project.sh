@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Interactively migrate project folders (and their Claude Code session
-# history) from am-ma's ~/code/<project> to am6's ~/code/<project>, over
-# the am-ma -> am6 Tailscale SSH set up by generate_inter_host_key.sh.
+# history) from mba13-linux's ~/code/<project> to geekom-linux's ~/code/<project>, over
+# the mba13-linux -> geekom-linux Tailscale SSH set up by generate_inter_host_key.sh.
 #
-# Run this ON am-ma.
+# Run this ON mba13-linux.
 #
 # Why absolute paths matter: Claude Code keys sessions to a project's
 # absolute path (~/.claude/projects/<path-with-/-replaced-by-->/), so both
@@ -28,13 +28,13 @@
 set -uo pipefail
 
 CODE_DIR="$HOME/code"
-AM6_USER="am"
-AM6_IP="100.78.110.5"
-AM6_KEY="$HOME/.ssh/am-ma_to_tailnet_ed25519"
+GEEKOM_LINUX_USER="am"
+GEEKOM_LINUX_IP="100.78.110.5"
+GEEKOM_LINUX_KEY="$HOME/.ssh/mba13-linux_to_tailnet_ed25519"
 
-if [[ ! -f "$AM6_KEY" ]]; then
-  echo "ERROR: $AM6_KEY not found." >&2
-  echo "Run ./generate_inter_host_key.sh first and get it authorized on am6." >&2
+if [[ ! -f "$GEEKOM_LINUX_KEY" ]]; then
+  echo "ERROR: $GEEKOM_LINUX_KEY not found." >&2
+  echo "Run ./generate_inter_host_key.sh first and get it authorized on geekom-linux." >&2
   exit 1
 fi
 
@@ -51,7 +51,7 @@ rsync_ssh() {
   local extra="$1" src="$2" dst="$3"
   local opts=(-avz)
   [[ -n "$extra" ]] && opts+=("$extra")
-  rsync "${opts[@]}" -e "ssh -i $AM6_KEY" "$src" "$dst"
+  rsync "${opts[@]}" -e "ssh -i $GEEKOM_LINUX_KEY" "$src" "$dst"
 }
 
 log "# Migration run: $(date -Iseconds)"
@@ -64,7 +64,7 @@ while true; do
   echo "== Candidate projects in $CODE_DIR =="
   mapfile -t CANDIDATES < <(
     find "$CODE_DIR" -mindepth 1 -maxdepth 1 -type d \
-      ! -name ".*" ! -name "migrated_to_am6" -printf '%f\n' | sort
+      ! -name ".*" ! -name "migrated_to_geekom-linux" -printf '%f\n' | sort
   )
 
   if [[ ${#CANDIDATES[@]} -eq 0 ]]; then
@@ -91,10 +91,10 @@ while true; do
 
   PROJECT="${CANDIDATES[$((choice - 1))]}"
   SRC_CODE="$CODE_DIR/$PROJECT/"
-  DST_CODE="$AM6_USER@$AM6_IP:$CODE_DIR/$PROJECT/"
+  DST_CODE="$GEEKOM_LINUX_USER@$GEEKOM_LINUX_IP:$CODE_DIR/$PROJECT/"
   MANGLED="$(echo "$CODE_DIR/$PROJECT" | sed 's/\//-/g')"
   SRC_SESSION="$HOME/.claude/projects/$MANGLED/"
-  DST_SESSION="$AM6_USER@$AM6_IP:$HOME/.claude/projects/$MANGLED/"
+  DST_SESSION="$GEEKOM_LINUX_USER@$GEEKOM_LINUX_IP:$HOME/.claude/projects/$MANGLED/"
 
   echo
   echo "== Dry run: code folder ($PROJECT) =="
@@ -139,12 +139,12 @@ while true; do
   if [[ "$CODE_STATUS" == "ok" ]]; then
     MIGRATED_THIS_RUN+=("$PROJECT")
 
-    read -rp "Move local '$PROJECT' into $CODE_DIR/migrated_to_am6/ to declutter (kept as backup, nothing deleted)? (y/N): " cleanup
+    read -rp "Move local '$PROJECT' into $CODE_DIR/migrated_to_geekom-linux/ to declutter (kept as backup, nothing deleted)? (y/N): " cleanup
     if [[ "$cleanup" == "y" || "$cleanup" == "Y" ]]; then
-      mkdir -p "$CODE_DIR/migrated_to_am6"
-      mv "$CODE_DIR/$PROJECT" "$CODE_DIR/migrated_to_am6/$PROJECT"
-      log "CLEANUP $PROJECT moved to $CODE_DIR/migrated_to_am6/"
-      echo "Moved to $CODE_DIR/migrated_to_am6/$PROJECT"
+      mkdir -p "$CODE_DIR/migrated_to_geekom-linux"
+      mv "$CODE_DIR/$PROJECT" "$CODE_DIR/migrated_to_geekom-linux/$PROJECT"
+      log "CLEANUP $PROJECT moved to $CODE_DIR/migrated_to_geekom-linux/"
+      echo "Moved to $CODE_DIR/migrated_to_geekom-linux/$PROJECT"
     fi
   else
     echo "Code migration failed — see rsync output above. Not offering cleanup."

@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Generate am-ma's dedicated inter-host SSH key — used for am-ma -> other
-# AM-tailnet hosts (am6, ams-mbp16), never for GitHub or Zenith. See
+# Generate mba13-linux's dedicated inter-host SSH key — used for mba13-linux -> other
+# AM-tailnet hosts (geekom-linux, mbp16-mac), never for GitHub or Zenith. See
 # ../HOMELAB.md (SSH key inventory) for the "one key per trust boundary"
 # convention this follows.
 #
-# Run this ON am-ma. It only touches ~/.ssh — no sudo needed.
+# Run this ON mba13-linux. It only touches ~/.ssh — no sudo needed.
 # Idempotent: if the key already exists, it prints the existing pubkey
 # instead of overwriting it.
 #
@@ -12,8 +12,8 @@
 
 set -euo pipefail
 
-KEY="$HOME/.ssh/am-ma_to_tailnet_ed25519"
-COMMENT="am-ma-tailnet@ankitmalik.in"
+KEY="$HOME/.ssh/mba13-linux_to_tailnet_ed25519"
+COMMENT="mba13-linux-tailnet@ankitmalik.in"
 
 if [[ -f "$KEY" ]]; then
   echo "Key already exists at $KEY — not overwriting."
