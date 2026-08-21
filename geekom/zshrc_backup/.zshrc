@@ -42,6 +42,20 @@ if [ -d "${HOME}/.local/bin" ] && [[ ":${PATH}:" != *":${HOME}/.local/bin:"* ]];
 fi
 
 # ═══════════════════════════════════════════════════════
+# Remote-session background color — visual "you're on geekom" flag
+# ═══════════════════════════════════════════════════════
+# Only fires when this shell was reached via SSH (not a local login), so
+# it doesn't recolor geekom's own desktop terminal — only a terminal
+# that's SSH'd in from elsewhere. Uses OSC 11 (set background color),
+# supported by iTerm2, kitty, alacritty, wezterm, foot, etc. macOS
+# Terminal.app doesn't support it — this is a harmless no-op there, not
+# an error. Restores the terminal's own background on shell exit (OSC 111).
+if [[ -n "$SSH_CONNECTION" ]]; then
+  printf '\033]11;#2b0000\007'
+  trap 'printf "\033]111\007"' EXIT
+fi
+
+# ═══════════════════════════════════════════════════════
 # Aliases (migrated from ~/.bashrc)
 # ═══════════════════════════════════════════════════════
 alias ll='ls -alF'
