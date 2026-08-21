@@ -154,6 +154,65 @@ Added geekom/logs/ to persist script run output going forward
 (disable_sleep_2026-08-15.log, sshd_hardening_2026-08-15.log).
 
 
+## 2026-Aug-16
+
+1. Screenshot-server test harness + CDP/manual-tab capture (snapshot-tool repo)
+
+Built `test_screenshot_server.html` — a standalone page (no dependency on
+the rest of `crypto_cad_rates.html`) to iterate on `screenshot_server.py`
+directly: resolve a ticker via CoinGecko's public search, POST to
+`/screenshot`, and show the raw response/extracted price/screenshot/errors
+without going through the full tool.
+
+Diagnosed a Playwright error report as the classic two-step-install trap:
+`pip install -r requirements.txt` installs the Python bindings but not the
+actual browser binary — `playwright install chromium` is a separate,
+required step.
+
+Extended `screenshot_server.py` with a second browser mode, chosen via an
+interactive startup prompt (or `SCREENSHOT_SERVER_MODE=fresh|cdp` to skip
+it): the original sandboxed-Chromium launch, or attaching over CDP to an
+already-running Chrome/Brave/etc. window (`--remote-debugging-port=9222`),
+which carries real cookies/login/trust and is less likely to trip
+Cloudflare's bot check. Added a matching third UI option in
+`crypto_cad_rates.html`'s manual panel — "Copy URL, open it yourself &
+capture" — that copies the dated CoinGecko URL, counts down (default 15s,
+editable, or "Capture now"), then calls a new `/screenshot-manual` endpoint
+that finds the matching tab by URL (no reliable "focused tab" signal exists
+over CDP) and screenshots it directly. Initially gated that endpoint to
+CDP-mode only, then realized the tab-search logic never actually depended on
+CDP specifically — Playwright's own launched Chromium window is just as real
+and queryable — so relaxed it to work in fresh mode too (paste into the
+server's own already-open window instead of a separate browser). Added a
+`/mode` endpoint the UI polls to show a live "paste into X window" hint.
+Not yet committed in the snapshot-tool repo as of this writing.
+
+Worked out the exact Brave launch command for CDP mode with a named profile
+("CT"): `open -na "Brave Browser" --args --remote-debugging-port=9222
+--profile-directory="CT"` — `-n` forces a new process so `--args` isn't
+silently dropped, `--profile-directory` wants the folder name (not the
+display name shown in Brave's UI, check `brave://version` if they differ),
+and Brave has to be fully quit (Cmd+Q) first since the flag only applies on
+a clean launch, not a window opened from an already-running process.
+
+2. zsh setup on geekom itself
+
+Installed Oh My Zsh + Powerlevel10k + zsh-autosuggestions +
+zsh-syntax-highlighting + zsh-completions + fzf, all via direct git clones
+(no sudo needed — zsh 5.9 was already present, already listed in
+`/etc/shells`). Hand-wrote a fresh `~/.zshrc` (not the OMZ template) and
+migrated the bash aliases (`sham`, `hl`, `hlg`, `cr`, plus the standard
+`ll`/`la`/`l`/`grep --color` ones) into it. `chsh -s $(which zsh)` and
+`p10k configure` both need an interactive terminal (password prompt / font
+detection), so those were left for a real session rather than done headless
+here — confirmed afterward that `~/.zshrc` now carries Powerlevel10k's
+instant-prompt block, so both were completed.
+
+Backed up `~/.zshrc` and `~/.p10k.zsh` to `zshrc_backup/` in this folder,
+with `zsh_setup.md` documenting the full plugin list and exact
+from-scratch reproduction steps for another machine.
+
+
 ## Before 2026-Aug-14
 
 
