@@ -11,7 +11,7 @@ trust model, and SSH access map. Open follow-ups live in `TODO.md`.
 |---|---|---|---|---|
 | geekom | geekom-linux | `geekom/` | Ubuntu 26.04 (desktop) | `100.78.110.5` |
 | mba13 | mba13-linux | `mba13/` | Asahi Linux (2nd partition — mba13 dual-boots macOS + Asahi; `mba13-linux` is the tailnet identity of the Asahi boot, not macOS) | `100.105.210.109` |
-| mba13 | mba13-mac | `mba13/` | macOS (1st partition — the other boot of the same physical machine as `mba13-linux`) | already on the AM Tailscale network; not yet onboarded into this repo's hardening — see `mba13/todo_mba13-mac_onboard.md` |
+| mba13 | mba13-mac | `mba13/` | macOS (1st partition — the other boot of the same physical machine as `mba13-linux`) | on the AM Tailscale network; **outbound-only** — "Disable incoming connections" is on in the Tailscale app, so it can SSH out to other hosts but nothing can SSH into it; see `mba13/todo_mba13-mac_onboard.md` |
 | mbp16 | mbp16-mac | `mbp16/` | macOS | `100.87.74.44` (also has a separate Zenith-network IP, `100.108.204.52`, when logged into Zenith instead) |
 
 "Physical name" is how the machine is referred to day to day; "Tailnet
@@ -52,18 +52,23 @@ new IP added to the allowlist on every existing machine it needs to reach.
 
 ## SSH access map
 
-| From \ To          | geekom-linux (geekom)        | mba13-linux (mba13)        | mbp16-mac (mbp16) |
-|---------------------|----------------------|------------------------|--------------------|
-| **geekom-linux (geekom)**    | —                    | key added, blocked by mba13-linux's ufw allowlist (geekom-linux's IP not yet added) | not yet            |
-| **mba13-linux (mba13)**   | not yet              | —                      | not yet            |
-| **mbp16-mac (mbp16)** | yes (authorized)   | yes (authorized)       | —                  |
+| From \ To          | geekom-linux (geekom)        | mba13-linux (mba13)        | mbp16-mac (mbp16) | mba13-mac (mba13) |
+|---------------------|----------------------|------------------------|--------------------|--------------------|
+| **geekom-linux (geekom)**    | —                    | key added, blocked by mba13-linux's ufw allowlist (geekom-linux's IP not yet added) | not yet            | n/a — mba13-mac is inbound-blocked |
+| **mba13-linux (mba13)**   | not yet              | —                      | not yet            | n/a — mba13-mac is inbound-blocked |
+| **mbp16-mac (mbp16)** | yes (authorized)   | yes (authorized)       | —                  | n/a — mba13-mac is inbound-blocked |
+| **mba13-mac (mba13)** | yes (authorized)   | not yet       | n/a                  | — |
 
 `mbp16-mac` currently has inbound SSH authorized on both `geekom-linux` and
 `mba13-linux`. `geekom-linux` → `mba13-linux`: the key is in `mba13-linux`'s `authorized_keys`, but
 `mba13-linux`'s ufw allowlist doesn't include `geekom-linux`'s IP (`100.78.110.5`) yet —
 needs `sudo ufw allow in on tailscale0 from 100.78.110.5 to any port 22
-proto tcp comment 'SSH from geekom-linux'` on `mba13-linux`. Cells are updated as access
-is actually granted — this table reflects real reachability, not intent.
+proto tcp comment 'SSH from geekom-linux'` on `mba13-linux`. `mba13-mac` is
+**outbound-only by design** (Tailscale's "Disable incoming connections" is
+on) — it will never have a "To" column, and other machines don't need it
+added to their ufw allowlists since nothing needs to reach in. Cells are
+updated as access is actually granted — this table reflects real
+reachability, not intent.
 
 ## SSH key inventory
 
@@ -78,6 +83,7 @@ private keys never leave the machine they were generated on.
 | `mbp16/id_ed25519.pub` | mbp16-mac | GitHub only |
 | `mbp16/id_rsa.pub` | mbp16-mac | mbp16-mac → other AM-tailnet hosts (currently authorized on geekom-linux, mba13-linux) |
 | `mbp16/aa_am_ed25519.pub` | mbp16-mac | Login to Zenith network only |
+| `mba13/mba13-mac_to_tailnet.pub` | mba13-mac | mba13-mac → other AM-tailnet hosts (currently authorized on geekom-linux). Outbound only — mba13-mac itself has no inbound key to authorize since nothing SSHes into it. |
 
 Convention going forward: **one key per trust boundary** (GitHub vs.
 inter-host AM-tailnet SSH vs. Zenith), never reused across boundaries.
@@ -92,6 +98,7 @@ into a machine outside their intended boundary.
 | geekom-linux (geekom) | done | done (allowlist: mba13-linux, mbp16-mac) | done | confirmed off |
 | mba13-linux (mba13) | yes (working) | yes, but geekom-linux not yet added to allowlist | TBD — review pending | TBD — review pending |
 | mbp16-mac (mbp16) | TBD | TBD | TBD | TBD |
+| mba13-mac (mba13) | n/a — outbound-only, no inbound sshd needed | n/a — Tailscale's "Disable incoming connections" blocks all inbound at the Tailscale layer instead | n/a | TBD — belt-and-suspenders check pending, see `mba13/todo_mba13-mac_onboard.md` |
 
 `geekom/tailscale_setup.md`, `geekom/ufw_rules.sh`,
 `geekom/sshd_hardening.sh`, `geekom/test_ssh_setup.sh` are the reusable
@@ -100,6 +107,20 @@ tooling applies directly — only `mbp16` and `mba13-mac` (macOS) need
 different tooling (Application Firewall / `pf` instead of `ufw`).
 
 ## Changelog
+
+- **2026-08-22 — mba13-mac scoped to outbound-only.** Decided mba13-mac
+  will never be SSH'd into, only used to SSH out to other AM-tailnet
+  hosts. Confirmed via Tailscale's own "Disable incoming connections"
+  toggle (macOS app), which blocks all inbound tailnet traffic at the
+  Tailscale layer. This removes the need for macOS Application
+  Firewall/`pf` allowlist scripting, inbound sshd key-only hardening,
+  and adding mba13-mac's IP to other machines' `ufw` allowlists — those
+  only mattered for inbound reachability. Updated
+  `mba13/todo_mba13-mac_onboard.md`, the Machines/SSH access
+  map/hardening-status tables above, and `TODO.md` to match. zsh setup
+  and outbound SSH to geekom-linux (via the new
+  `mba13/mba13-mac_to_tailnet.pub` key, authorized on geekom-linux) are
+  both confirmed working.
 
 - **2026-08-22 — Tailnet hostname migration.** Renamed all three
   Tailscale device names for clarity (physical name + OS, matching

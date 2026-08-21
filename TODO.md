@@ -12,11 +12,17 @@
   `mba13-linux` to bring the live comments in sync. See `HOMELAB.md`
   changelog for the full list of what else was renamed in this pass.
 
-- [ ] **Onboard `mba13-mac` into this repo's hardening.** The macOS boot
-  on mba13 is already on the AM Tailscale network but not yet
-  key-only-SSH/ufw-hardened or documented here. See
-  `mba13/todo_mba13-mac_onboard.md` — written to be run/invoked from
-  Claude Code on that machine directly.
+- [ ] **Onboard `mba13-mac` (outbound-only) — nearly done.** Scope
+  narrowed: mba13-mac should never be SSH'd *into*, only used to SSH
+  *out*. Inbound is already blocked via Tailscale's own "Disable
+  incoming connections" toggle, so no macOS firewall/sshd hardening is
+  needed. Done: zsh setup, dedicated outbound key
+  (`mba13/mba13-mac_to_tailnet.pub`), SSH to geekom-linux confirmed
+  working. Remaining: confirm inbound is actually blocked (ssh/nc
+  attempt from a peer should fail), confirm `tailscale debug prefs`
+  shows `"RunSSH": false`, fill in `HOMELAB.md`'s machines/hardening
+  tables with mba13-mac's real IP. See
+  `mba13/todo_mba13-mac_onboard.md`.
 
 - [ ] **Zenith network: update ufw allowlists with Zenith IPs.** When any
   of these machines is next connected to the Zenith Tailscale network

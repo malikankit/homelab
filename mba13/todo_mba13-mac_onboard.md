@@ -19,61 +19,54 @@ Treat this the same way `mbp16` (macOS) was onboarded — `geekom/` and
 (Application Firewall / `pf` instead of `ufw`, `launchd` instead of
 `systemd`).
 
+**Scope note (2026-08-22):** mba13-mac is **outbound-only** — it should
+never be SSH'd *into*, only used to SSH *out* to other AM-tailnet hosts.
+Confirmed via Tailscale's own "Disable incoming connections" toggle
+(macOS app), which blocks all inbound tailnet traffic to this device at
+the Tailscale layer itself. This removes the need for inbound-facing
+hardening (macOS Application Firewall/`pf` allowlist, sshd key-only
+config, Remote Login enabled, other machines' ufw allowlists) — those
+steps only mattered if something needed to reach *in*. Steps below are
+trimmed to reflect that; see `../TODO.md` for the current status.
+
 ## Steps
 
 1. **Confirm current Tailscale state.** `tailscale status` — confirm
    the device shows as `mba13-mac` (already renamed per the 2026-08-22
    migration — see `../HOMELAB.md` changelog) and note its AM-tailnet IP
-   for the machines table in `../HOMELAB.md`.
+   for the machines table in `../HOMELAB.md`. — **done**, zsh setup and
+   outbound SSH to geekom-linux both confirmed working.
 
 2. **Dedicated inter-host SSH key.** Follow the "one key per trust
    boundary" convention (`../HOMELAB.md` SSH key inventory): generate a
-   `mba13-mac_to_tailnet_ed25519` keypair (mirror
-   `generate_inter_host_key.sh`, adapted for macOS — no `chmod`
-   differences needed, `ssh-keygen` is the same). Never reuse mbp16's or
-   mba13-linux's keys. Copy the `.pub` into this repo folder (`mba13/`)
-   for easy copy-paste into other machines' `authorized_keys`, same as
-   the other machines' `.pub` files.
+   `mba13-mac_to_tailnet` keypair (mirror `generate_inter_host_key.sh`,
+   adapted for macOS — no `chmod` differences needed, `ssh-keygen` is
+   the same). Never reuse mbp16's or mba13-linux's keys. Copy the `.pub`
+   into this repo folder (`mba13/`) for easy copy-paste into other
+   machines' `authorized_keys`, same as the other machines' `.pub`
+   files. — **done**: `mba13/mba13-mac_to_tailnet.pub`, authorized on
+   geekom-linux.
 
-3. **Key-only SSH.** Enable Remote Login (System Settings → General →
-   Sharing → Remote Login, or `sudo systemsetup -setremotelogin on`),
-   add the relevant peer public keys to `~/.ssh/authorized_keys`, then
-   harden `sshd_config` (or a drop-in under `/etc/ssh/sshd_config.d/` if
-   the installed OpenSSH version supports it) to key-only auth —
-   `PubkeyAuthentication yes`, `PasswordAuthentication no`,
-   `KbdInteractiveAuthentication no`, `PermitRootLogin no` — matching
-   `geekom/tailscale_setup.md` section (d). Verify with
-   `sudo sshd -t` before restarting.
+3. **Confirm inbound is actually blocked.** Since mba13-mac doesn't
+   need to accept SSH, verify the negative instead of hardening for the
+   positive: from another AM-tailnet peer, confirm
+   `ssh <user>@<mba13-mac-ip>` and `nc -zv -w3 <mba13-mac-ip> 22` both
+   fail/time out. (Belt-and-suspenders: Remote Login should also stay
+   **off** in System Settings → General → Sharing — no sshd listening
+   at all is stronger than sshd-listening-but-blocked-by-Tailscale.)
 
-4. **Firewall: per-machine IP allowlist, not tailnet-wide.** macOS
-   doesn't have `ufw` — use the Application Firewall
-   (`/usr/libexec/ApplicationFirewall/socketfilterfw`) and/or `pf`
-   (`/etc/pf.conf` + an anchor) to scope inbound SSH to only the known
-   AM-tailnet peer IPs (mba13-linux, geekom-linux, mbp16-mac), same
-   policy as `geekom/ufw_rules.sh` / `mba13/ufw_rules.sh` — not "any
-   device on the tailnet." Write this as a script
-   (`mba13/pf_rules_mac.sh` or similar) mirroring the existing
-   `ufw_rules.sh` idempotent/re-runnable pattern, rather than one-off
-   manual `pf` edits.
-
-5. **Confirm Tailscale SSH is off.** `tailscale debug prefs` should show
+4. **Confirm Tailscale SSH is off.** `tailscale debug prefs` should show
    `"RunSSH": false` — same rationale as the other machines
-   (`geekom/tailscale_setup.md` "Why not Tailscale SSH?").
+   (`geekom/tailscale_setup.md` "Why not Tailscale SSH?"). Belt-and-
+   suspenders alongside the "Disable incoming connections" toggle, not
+   a substitute for it.
 
-6. **Update the allowlists on the other machines.** Once `mba13-mac`'s
-   IP is known, add it to `geekom/ufw_rules.sh` and
-   `mba13/ufw_rules.sh` (the Asahi side) — new machine → new IP added to
-   every existing machine it needs to reach, per the pattern in
-   `../HOMELAB.md`.
+5. **Update `../HOMELAB.md`.** Fill in `mba13-mac`'s real IP in the
+   Machines table (replacing the "not yet onboarded" placeholder), note
+   it's outbound-only/inbound-blocked-via-Tailscale in the per-machine
+   hardening status table, and add an outbound-only row to the SSH
+   access map — same shape as the other three machines, adjusted for
+   the outbound-only model.
 
-7. **Test.** Adapt `geekom/test_ssh_setup.sh` (key auth succeeds,
-   password/keyboard-interactive rejected, LAN path unreachable) run
-   from a peer machine against `mba13-mac`.
-
-8. **Update `../HOMELAB.md`.** Fill in `mba13-mac`'s real IP in the
-   Machines table (replacing the "not yet onboarded" placeholder), add
-   its row to the SSH access map, SSH key inventory, and per-machine
-   hardening status tables — same shape as the other three machines.
-
-9. **Remove this file's TODO entry** from `../TODO.md` once done, and
+6. **Remove this file's TODO entry** from `../TODO.md` once done, and
    fold a short summary into `../HOMELAB.md`'s changelog.
