@@ -58,7 +58,7 @@ fi
 # Terminal.app doesn't support it — this is a harmless no-op there, not
 # an error. Restores the terminal's own background on shell exit (OSC 111).
 if [[ -n "$SSH_CONNECTION" ]]; then
-  printf '\033]11;#2b0000\007'
+  printf '\033]11;#fdf6e3\007'
   trap 'printf "\033]111\007"' EXIT
 fi
 
