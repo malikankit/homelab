@@ -213,6 +213,112 @@ with `zsh_setup.md` documenting the full plugin list and exact
 from-scratch reproduction steps for another machine.
 
 
+## 2026-Aug-21
+
+1. mba13-mac onboarding (outbound-only)
+
+Generated mba13-mac's dedicated inter-host SSH key
+(`mba13-mac_to_tailnet.pub`, not `_ed25519` suffixed like the others —
+inconsistency noted, not fixed) and authorized it on geekom. Ran the new
+`mba13/zsh_setup_mac.sh` there and confirmed outbound SSH from mba13-mac
+to geekom works.
+
+Decided mba13-mac is **outbound-only**: it should never be SSH'd into,
+only used to SSH out. Confirmed via Tailscale's own "Disable incoming
+connections" toggle (macOS app), which blocks all inbound tailnet
+traffic to the device at the Tailscale layer. This removed the need for
+macOS firewall/pf scripting, inbound sshd hardening, and adding
+mba13-mac to other machines' ufw allowlists — trimmed
+`mba13/todo_mba13-mac_onboard.md` and `HOMELAB.md`'s tables accordingly.
+Verified the block is real: `nc -zv` and `ssh` from geekom to
+mba13-mac's Tailscale IP (`100.71.170.17`, found via `tailscale status`)
+both returned "Connection refused."
+
+Commits: `a1d4010` "SSH Key for MBA13-Mac", `f73e87a` "Scope mba13-mac to
+outbound-only, drop inbound hardening steps".
+
+2. Tailnet hostname migration
+
+Renamed all three Tailscale devices for clarity (physical name + OS):
+`am6` → `geekom-linux`, `am-ma` → `mba13-linux`, `ams-mbp16` →
+`mbp16-mac` — ahead of onboarding `mba13-mac`, which was already named
+that way. Updated every reference across the repo (docs, scripts,
+comments), renamed the inter-host SSH key files/comments to match
+(keypairs themselves unchanged, so existing `authorized_keys` entries
+stayed valid), and updated `ufw_rules.sh` on both `geekom/` and `mba13/`
+— though the *live* ufw rules on each machine still need
+`sudo ./ufw_rules.sh` re-run to pick up the renamed comments (tracked in
+`TODO.md`, cosmetic only).
+
+Commit: `93a65bf` "Migrate Tailnet hostnames to <physical>-<os>
+convention".
+
+3. `mbp16/zsh_setup_mac.sh` written
+
+Same self-contained pattern as mba13's script (pulls
+`geekom/zshrc_backup/.p10k.zsh` from the repo clone, writes its own
+`.zshrc`) — written but not yet run on mbp16-mac itself.
+
+Commit: `4db4532`.
+
+4. Discovered Tailscale bypasses ufw
+
+While testing whether geekom's ufw allowlist would block an SSH attempt
+from mba13-mac (whose IP wasn't in the allowlist), found that it
+didn't — the connection succeeded anyway. Root cause: `tailscaled`
+inserts its own `ts-input` iptables chain **ahead of every ufw chain**
+in `INPUT`, and that chain blanket-accepts traffic arriving over
+`tailscale0` before ufw's rules ever run. Confirmed via
+`sudo iptables -L INPUT/-L ts-input -n -v --line-numbers`.
+
+This means the ufw per-machine allowlist documented in `HOMELAB.md` as
+the real security boundary isn't actually doing that job for Tailscale
+traffic, on AM or Zenith. Real reachability today is: Tailscale network
+membership (solid) + Tailscale ACL policy (default: allow-all between
+tailnet devices, unless a custom policy has been written) + sshd
+key-only auth (still real and working). Wrote this up in
+`knowledge/tailscale_ufw_bypass.md`, linked it from `HOMELAB.md`'s trust
+model section, and left the actual fix (write restrictive Tailscale
+ACLs, vs. `tailscale set --netfilter-mode=off` to let ufw see the
+traffic again) as an open, undecided `TODO.md` item.
+
+Commit: `3bdac17`.
+
+5. zsh prompt overhaul
+
+Tried two approaches to visually flag "you're on geekom" in a
+terminal: (a) enabling Powerlevel10k's built-in `context` segment
+(`user@hostname`, suppressed by default), and (b) an OSC 11
+escape-sequence trick to recolor the terminal background on SSH
+sessions specifically (gated on `$SSH_CONNECTION`, restored via OSC 111
+on exit). (b) didn't render in iTerm2 despite being a standards-based
+escape sequence most terminals support.
+
+Simplified instead: disabled Powerlevel10k entirely
+(`ZSH_THEME=""`, instant-prompt block commented out, left installed and
+easy to re-enable) in favor of zsh's native
+`PROMPT='%n@%m:%~$ '` — a plain bash-style prompt
+(`am@geekom-linux:~$`) with no Nerd Font or terminal-escape-sequence
+dependency, so it renders identically everywhere. Kept the SSH
+background-color hook (still useful, just not the primary signal
+anymore) and changed its color from an initial dark red to Solarized
+Light's `base3` (`#fdf6e3`) per explicit request. Also fixed geekom's
+live `~/.zshrc`, which had drifted from the repo copy (a manual edit had
+half-commented the background-color block, leaving an orphaned `trap`
+line active).
+
+Commits: `70f3dcc`, `4bc3754`, `13bb27d`.
+
+6. Added `gitandansiblesetupplan.md`
+
+Handoff doc from a Claude Desktop planning session — a two-phase plan to
+self-host services starting with a Forgejo git server + Obsidian sync on
+geekom (Phase 1), with Ansible-based reproducibility deferred to Phase 2.
+Execution of Phase 1's git-server piece starts next.
+
+Commit: `7022f21`.
+
+
 ## Before 2026-Aug-14
 
 
