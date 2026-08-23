@@ -1,0 +1,3 @@
+# Runtime state for self-hosted services — lives on the host, not in git.
+services/dockge/data/
+services/dockge/stacks/
