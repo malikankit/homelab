@@ -1,3 +1,3 @@
-# Runtime state for self-hosted services — lives on the host, not in git.
-services/dockge/data/
-services/dockge/stacks/
+# Runtime state (data, configs, secrets) for self-hosted services lives
+# outside this repo entirely, under ~/services/{state,configs}/ on the
+# host — so there's normally nothing under services/ here to ignore.
