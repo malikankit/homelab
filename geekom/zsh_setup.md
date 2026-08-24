@@ -1,9 +1,12 @@
 # zsh setup (geekom)
 
 Switched geekom's interactive shell from bash to zsh: Oh My Zsh +
-Powerlevel10k + a standard productivity plugin set. Config backups live in
-`zshrc_backup/` in this folder (`.zshrc`, `.p10k.zsh`) — restore by copying
-them back to `~/`.
+Powerlevel10k + a standard productivity plugin set. `.zshrc` and `.p10k.zsh`
+are managed by [chezmoi](https://www.chezmoi.io/) (source: `../chezmoi/` at
+the repo root, `dot_zshrc`/`dot_p10k.zsh`) — see `../chezmoi/README.md` for
+the edit/apply workflow. This replaced an earlier plain-copy backup
+(`zshrc_backup/`, retired 2026-08-24) that required manually keeping the
+repo copy and the live `~/.zshrc` in sync by hand.
 
 ## What's installed
 
@@ -35,8 +38,12 @@ git clone --depth=1 https://github.com/romkatv/powerlevel10k.git "$ZSH_CUSTOM/th
 git clone --depth=1 https://github.com/junegunn/fzf.git ~/.fzf
 ~/.fzf/install --key-bindings --completion --no-update-rc --no-bash --no-fish
 
-cp zshrc_backup/.zshrc ~/.zshrc
-cp zshrc_backup/.p10k.zsh ~/.p10k.zsh
+# Install chezmoi (no sudo needed) and apply the managed .zshrc/.p10k.zsh —
+# see ../chezmoi/README.md for full bootstrap details.
+sh -c "$(curl -fsSL https://get.chezmoi.io)" -- -b ~/.local/bin
+mkdir -p ~/.config/chezmoi
+echo 'sourceDir = "'"$(pwd)"'/chezmoi"' > ~/.config/chezmoi/chezmoi.toml
+~/.local/bin/chezmoi apply
 ```
 
 Then make zsh the login shell (needs the account's password — `chsh` prompts
@@ -51,7 +58,9 @@ covers — re-run `p10k configure` on a fresh machine if icons look wrong.
 
 ## Note on ~/.bashrc
 
-Personal aliases (`sham`, `hl`, `hlg`, `cr`, plus the standard `ll`/`la`/`l`/
-`grep --color` ones) were migrated into `.zshrc` — bash is still installed
-and `~/.bashrc` is untouched/still valid as a fallback, just no longer the
+Personal aliases were migrated out of `~/.bashrc`. Shared ones (`hl`, `hlg`,
+`cr`, plus the standard `ll`/`la`/`l`/`grep --color` ones) now live in
+`../dotfiles/aliases.sh` and are sourced from `.zshrc`; machine-specific ones
+(`sham`) stay directly in `.zshrc` itself. Bash is still installed and
+`~/.bashrc` is untouched/still valid as a fallback, just no longer the
 default login shell.

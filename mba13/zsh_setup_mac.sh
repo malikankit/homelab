@@ -5,8 +5,9 @@
 #
 # Self-contained: run this from a clone of the homelab repo already on
 # this machine (mba13/todo_mba13-mac_onboard.md step 0). It pulls
-# ~/.p10k.zsh straight from ../geekom/zshrc_backup/ in this same repo
-# clone — no manual file copying from geekom needed.
+# ~/.p10k.zsh straight from ../chezmoi/ (geekom's chezmoi-managed source
+# of truth) in this same repo clone — no manual file copying from geekom
+# needed.
 #
 # Idempotent: safe to re-run; skips anything already cloned/installed,
 # and backs up any existing ~/.zshrc / ~/.p10k.zsh before overwriting.
@@ -16,7 +17,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-P10K_SRC="$REPO_ROOT/geekom/zshrc_backup/.p10k.zsh"
+P10K_SRC="$REPO_ROOT/chezmoi/dot_p10k.zsh"
 
 if [[ ! -f "$P10K_SRC" ]]; then
   echo "ERROR: $P10K_SRC not found — is this a clone of the homelab repo?" >&2
