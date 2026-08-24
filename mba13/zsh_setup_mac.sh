@@ -110,19 +110,13 @@ PROMPT='%n@%m:%~$ '
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
 # ═══════════════════════════════════════════════════════
-# Aliases
+# Aliases — shared ones live in the homelab repo, one copy for every
+# machine (see dotfiles/README.md for the convention).
 # ═══════════════════════════════════════════════════════
-alias ll='ls -alF'
-alias la='ls -A'
-alias l='ls -CF'
-alias grep='grep --color=auto'
-alias fgrep='fgrep --color=auto'
-alias egrep='egrep --color=auto'
+[ -f ~/code/homelab/dotfiles/aliases.sh ] && source ~/code/homelab/dotfiles/aliases.sh
 
-# Homelab
-alias hl="cd ~/code/homelab"
+# Machine-specific (not in the shared file)
 alias hlm="cd ~/code/homelab/mba13/"
-alias cr="claude --resume"
 
 # SSH to other AM-tailnet hosts — uses mba13-mac's dedicated inter-host key
 # (see ../HOMELAB.md SSH key inventory: mba13-mac_to_tailnet_ed25519).

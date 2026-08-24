@@ -5,6 +5,20 @@
 # fi
 
 # ═══════════════════════════════════════════════════════
+# Auto-attach tmux on SSH login
+# ═══════════════════════════════════════════════════════
+# Only fires for an incoming SSH session (not geekom's own desktop
+# terminal) that isn't already inside tmux. `exec` replaces this shell
+# with the tmux client so there's no leftover outer shell process;
+# `new-session -A -s main` attaches to the "main" session if it already
+# exists (e.g. from a previous SSH session) or creates it if not — so
+# reconnecting drops you back where you left off, and work started
+# under one SSH session survives a dropped connection.
+if [[ -n "$SSH_CONNECTION" ]] && [[ -z "$TMUX" ]]; then
+  exec tmux new-session -A -s main
+fi
+
+# ═══════════════════════════════════════════════════════
 # Oh My Zsh
 # ═══════════════════════════════════════════════════════
 export ZSH="$HOME/.oh-my-zsh"
@@ -63,18 +77,10 @@ if [[ -n "$SSH_CONNECTION" ]]; then
 fi
 
 # ═══════════════════════════════════════════════════════
-# Aliases (migrated from ~/.bashrc)
+# Aliases — shared ones live in the homelab repo, one copy for every
+# machine (see dotfiles/README.md for the convention).
 # ═══════════════════════════════════════════════════════
-alias ll='ls -alF'
-alias la='ls -A'
-alias l='ls -CF'
-alias grep='grep --color=auto'
-alias fgrep='fgrep --color=auto'
-alias egrep='egrep --color=auto'
-alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" "$(history|tail -n1|sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
+[ -f ~/code/homelab/dotfiles/aliases.sh ] && source ~/code/homelab/dotfiles/aliases.sh
 
-# Ankit Aliases
+# Machine-specific (not in the shared file)
 alias sham="ssh -i ~/.ssh/am6_to_tailnet_ed25519 am@100.105.210.109"
-alias hl="cd ~/code/homelab"
-alias hlg="cd ~/code/homelab/geekom/"
-alias cr="claude --resume"
