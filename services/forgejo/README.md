@@ -36,6 +36,23 @@ pre-filled from the compose file's environment. Create the admin
 account there. `DISABLE_REGISTRATION=true` is already set, so no one
 else can self-register afterward — new users are admin-created only.
 
+## Known gotcha: don't set START_SSH_SERVER=true
+
+This image runs a **real `sshd`** permanently via its own `s6`
+supervisor (unconditional, no toggle) for git-over-SSH — that's the
+intended mechanism, using `AuthorizedKeysCommand` to call `gitea serv`.
+Forgejo's own built-in Go SSH server is a *separate*, alternative
+implementation, off by default. Setting
+`FORGEJO__server__START_SSH_SERVER=true` (an earlier mistake here)
+makes Forgejo also try to bind the same listen port — both lose,
+crash-looping the container with `bind: address already in use` on
+every start (including right after the install wizard, whose own
+self-restart triggers this immediately). Fixed by explicitly setting
+`FORGEJO__server__START_SSH_SERVER=false` — explicit `false`, not just
+omitting the var, since `environment-to-ini` only overrides keys it's
+actually given and won't unset a value already baked into
+`app.ini` from a prior boot.
+
 ## Data / backup
 
 `~/services/state/forgejo/data/` — everything (SQLite DB, repos, SSH

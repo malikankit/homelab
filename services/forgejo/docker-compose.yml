@@ -10,7 +10,10 @@ services:
       - FORGEJO__server__ROOT_URL=https://6l.seahorse-enigmatic.ts.net/
       - FORGEJO__server__SSH_DOMAIN=6l.seahorse-enigmatic.ts.net
       - FORGEJO__server__SSH_PORT=2222
-      - FORGEJO__server__START_SSH_SERVER=true
+      # Explicitly false, not omitted — the image also runs a real sshd
+      # via s6 unconditionally (see README), so Forgejo's own built-in SSH
+      # server must stay off or both fight over the same listen port.
+      - FORGEJO__server__START_SSH_SERVER=false
       - FORGEJO__service__DISABLE_REGISTRATION=true
     volumes:
       - /home/am/services/state/forgejo/data:/data
