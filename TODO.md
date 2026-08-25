@@ -2,6 +2,25 @@
 
 ## Open
 
+- [ ] **tmux: make Caps Lock act as a second prefix key alongside Ctrl+b.**
+  On the Macs, Karabiner Elements now remaps Caps Lock to a held
+  ⌘⌃⌥⇧ modifier chord (no keycode of its own — it only does anything
+  combined with another key). Want e.g. Caps Lock+`:` to open tmux's
+  command prompt the same way Ctrl+b then `:` does today, without
+  breaking Ctrl+b. Complication: since Caps Lock alone sends no
+  keystroke, "Caps Lock + key" arrives at tmux as a single chorded key
+  event (e.g. Cmd-Ctrl-Opt-Shift-`:`), not two sequential events the
+  way Ctrl+b then `:` does — so this likely can't be a generic
+  `prefix2`, and instead needs individual `bind -n <chord+key>` entries
+  in tmux.conf (which doesn't exist yet in this repo — would need to be
+  added, likely under chezmoi) for each prefix command actually used,
+  each mapped to what `prefix + <key>` currently does. Also need to
+  confirm whether the terminal app (iTerm2 on both Macs, presumably)
+  actually forwards Cmd-modified key combos to the shell at all, since
+  terminals normally reserve Cmd for their own menu shortcuts. Needs
+  the user's Karabiner config / terminal key-passthrough settings
+  before this can be implemented correctly.
+
 - [ ] **Decide how to fix the Tailscale/ufw bypass.** `tailscaled`
   inserts its own `ts-input` chain ahead of ufw's, so ufw's per-machine
   IP allowlist never runs for traffic arriving over Tailscale —
