@@ -101,11 +101,39 @@ private keys never leave the machine they were generated on.
 |---|---|---|
 | `geekom/id_ed25519.pub` | geekom-linux | GitHub only — **not** used to authorize SSH into any host |
 | `geekom/geekom-linux_to_tailnet_ed25519.pub` | geekom-linux | geekom-linux → other AM-tailnet hosts |
+| `geekom/geekom-linux_to_forgejo_ed25519.pub` | geekom-linux | geekom-linux → Forgejo (git-over-SSH to its own local Forgejo instance, `ssh forgejo` alias) — this repo's `origin` remote pushes here too, alongside GitHub |
 | `mbp16/id_ed25519.pub` | mbp16-mac | GitHub only |
 | `mbp16/id_rsa.pub` | mbp16-mac | mbp16-mac → other AM-tailnet hosts (currently authorized on geekom-linux, mba13-linux) |
 | `mbp16/aa_am_ed25519.pub` | mbp16-mac | Login to Zenith network only |
 | `mba13/mba13-mac_to_tailnet.pub` | mba13-mac | mba13-mac → other AM-tailnet hosts (currently authorized on geekom-linux). Outbound only — mba13-mac itself has no inbound key to authorize since nothing SSHes into it. |
 | `mba13/mba13-linux_to_tailnet_ed25519.pub` | mba13-linux | mba13-linux → other AM-tailnet hosts (currently authorized on geekom-linux) |
+
+### This repo mirrors to Forgejo too
+
+`git@github.com:malikankit/homelab.git` remains this repo's `origin`
+fetch URL, but `origin` has a **second push URL** added
+(`forgejo:<forgejo-username>/homelab.git`, via the `Host forgejo` SSH
+config alias below) — a plain `git push` pushes to both GitHub and
+Forgejo automatically, no separate remote/command needed:
+
+```bash
+git remote set-url --add --push origin git@github.com:malikankit/homelab.git
+git remote set-url --add --push origin forgejo:<forgejo-username>/homelab.git
+```
+
+`git fetch`/`pull` are unaffected — still GitHub-only. The `forgejo`
+alias is a `~/.ssh/config` entry (outside chezmoi's scope, set up
+per-machine — see `obsidian_sync_setup.md` for the same pattern on the
+Macs):
+
+```
+Host forgejo
+    HostName 100.78.110.5
+    Port 2222
+    User git
+    IdentityFile ~/.ssh/<machine>_to_forgejo_ed25519
+    IdentitiesOnly yes
+```
 
 Convention going forward: **one key per trust boundary** (GitHub vs.
 inter-host AM-tailnet SSH vs. Zenith), never reused across boundaries.

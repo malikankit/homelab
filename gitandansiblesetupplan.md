@@ -308,6 +308,8 @@ If real-time mobile sync becomes a pain point, add LiveSync on top of obsidian-g
 4. [ ] Create private vault repo + wiki repo on Forgejo
 5. [ ] Configure obsidian-git plugin on desktop (SSH key auth)
 6. [ ] Test sync: edit → auto commit → push → pull on second device
-7. [ ] Create `homelab` repo on Forgejo, push all compose files + READMEs
+7. [x] Create `homelab` repo on Forgejo — done via a second push URL on
+   `origin` (not a separate remote), so `git push` mirrors to both
+   GitHub and Forgejo automatically. See `HOMELAB.md`.
 8. [x] Document everything as you go — ongoing; see `geekom/early_journal.md`
    and each `services/*/README.md`

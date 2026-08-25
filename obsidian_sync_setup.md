@@ -74,3 +74,7 @@ preference.
 Executed on both mba13-mac and mbp16-mac. Sync-loop testing (edit on
 one device → auto-commit → push → pull on the other) not yet
 separately confirmed — see `TODO.md`.
+
+See `HOMELAB.md` for this `homelab` repo's own dual-remote push setup
+(same Forgejo instance, different repo — it mirrors to Forgejo
+alongside GitHub, not part of the Obsidian sync above).

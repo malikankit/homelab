@@ -18,8 +18,10 @@
   `obsidian_sync_setup.md` for the full runbook.
 - [ ] **Test the sync loop end-to-end**: edit a note → auto-commit →
   push → pull on a second device. Not yet separately confirmed.
-- [ ] **Push this `homelab` repo to Forgejo too**, not just GitHub — so
-  compose files/READMEs are mirrored there per the original plan.
+- [x] **Push this `homelab` repo to Forgejo too**, not just GitHub.
+  Done — `origin` has a second push URL (Forgejo, via a dedicated
+  `geekom-linux_to_forgejo_ed25519` key), so a plain `git push` mirrors
+  to both automatically. See `HOMELAB.md`.
 - [ ] **geekom: decide on LUKS remote-unlock strategy.** Root disk is
   LUKS-encrypted — geekom has no network stack after any reboot until
   someone physically types the passphrase, which already caused an
