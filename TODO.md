@@ -2,6 +2,13 @@
 
 ## High priority
 
+- [ ] **Review the OneDrive → geekom rclone download for completeness.**
+  Copied `rclone.conf` from mbp16-mac (its `OneDrive` remote,
+  already-authenticated) to geekom's `~/.config/rclone/rclone.conf`, in
+  progress: `rclone copy "OneDrive:Arq Backup Data/93F1AF98-1DA2-4FC6-8AA1-F32F1515AAA9"
+  ~/onedrive_downloads/93F1AF98-1DA2-4FC6-8AA1-F32F1515AAA9 --progress`,
+  running in the user's own tmux session. Check it actually completed
+  (file count/size sanity check against OneDrive) once done.
 - [ ] **Create the Obsidian vault repo + a wiki repo on Forgejo.**
   Log into `https://6l.seahorse-enigmatic.ts.net/`, create two private
   repos (registration is disabled, so this is admin-account-only).
@@ -28,6 +35,12 @@
   "Open" below for detail.
 
 ## Open
+
+- [ ] **Add a `scpme` alias, same idea as `sshme`.** Per-machine,
+  host-less — `scp -i <that machine's own tailnet identity key>` — so
+  you append source/target yourself, same as `sshme`. Add to
+  `dot_zshrc.tmpl`'s per-machine branches alongside the existing
+  `sshme` entries.
 
 - [ ] **Extend chezmoi tracking of `authorized_keys` to mba13-linux and
   mbp16-mac.** Only geekom's `~/.ssh/authorized_keys` is chezmoi-managed

@@ -9,21 +9,21 @@
 # ═══════════════════════════════════════════════════════
 # Only fires for an incoming SSH session (not geekom's own desktop
 # terminal) that isn't already inside tmux. `exec` replaces this shell
-# with the tmux client so there's no leftover outer shell process.
-# Every SSH connection shares one session ("main"): if it already
-# exists, this opens a fresh *window* in it instead of dropping you
-# into whatever window/pane another connection is looking at (tmux
-# lets each attached client point at a different window of the same
-# session, so this doesn't collide); if "main" doesn't exist yet, it's
-# created fresh (with just its one default window — no extra blank
-# window tacked on). To see all windows: prefix+w. To rejoin from
-# elsewhere: `tmux attach -t main` then prefix+<window number>.
+# with the tmux client so there's no leftover outer shell process. Each
+# SSH connection gets its own independent session, named "ssh-<pid>"
+# ($$ is this shell's PID, unique per connection) — a single shared
+# session was tried instead (join "main", one window per login), but
+# tmux gives every client attached to the same session one shared
+# "current window," so one connection switching windows dragged every
+# other connection's view along with it. Independent sessions avoid
+# that entirely, at the cost of not sharing a window list across
+# connections. `-A` still means a dropped-and-reconnected *same*
+# session (e.g. `ssh` from a script that reuses a control-master
+# connection) reattaches instead of erroring. To rejoin a specific
+# session from elsewhere, or from a fresh SSH window on purpose:
+# `tmux attach -t ssh-<pid>` (see `tmux ls`).
 if [[ -n "$SSH_CONNECTION" ]] && [[ -z "$TMUX" ]]; then
-  if tmux has-session -t main 2>/dev/null; then
-    exec tmux new-window -t main \; attach-session -t main
-  else
-    exec tmux new-session -s main
-  fi
+  exec tmux new-session -A -s "ssh-$$"
 fi
 
 # ═══════════════════════════════════════════════════════
