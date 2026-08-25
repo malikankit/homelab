@@ -296,11 +296,18 @@ If real-time mobile sync becomes a pain point, add LiveSync on top of obsidian-g
 
 ## Immediate Next Steps (This Week)
 
-1. [ ] Install Docker + Dockge on A6
-2. [ ] Deploy Forgejo via Dockge
-3. [ ] Deploy Caddy, configure Tailscale HTTPS for `forgejo.your-tailnet.ts.net`
+1. [x] Install Docker + Dockge on A6 (geekom) — done 2026-08-22/23, see `services/dockge/`
+2. [x] Deploy Forgejo via Dockge — deployed via `docker compose` directly
+   (2026-08-25), then symlinked into Dockge's own stacks dir so it's also
+   managed from Dockge's UI — see `services/forgejo/`
+3. [x] Deploy Caddy, configure Tailscale HTTPS — done 2026-08-25; actual
+   hostname is `6l.seahorse-enigmatic.ts.net` (this tailnet's real
+   MagicDNS/cert domain), not the placeholder `forgejo.your-tailnet.ts.net`
+   above — see `services/caddy/`. Verified end-to-end (`200 OK` through
+   the full `tailscale serve → caddy → forgejo` chain).
 4. [ ] Create private vault repo + wiki repo on Forgejo
 5. [ ] Configure obsidian-git plugin on desktop (SSH key auth)
 6. [ ] Test sync: edit → auto commit → push → pull on second device
 7. [ ] Create `homelab` repo on Forgejo, push all compose files + READMEs
-8. [ ] Document everything as you go (feeds Phase 2 Ansible directly)
+8. [x] Document everything as you go — ongoing; see `geekom/early_journal.md`
+   and each `services/*/README.md`

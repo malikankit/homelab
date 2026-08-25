@@ -130,6 +130,20 @@ different tooling (Application Firewall / `pf` instead of `ufw`).
 
 ## Changelog
 
+- **2026-08-25 — Forgejo, Caddy, and Dockge all live on geekom.**
+  `https://6l.seahorse-enigmatic.ts.net/` now resolves to Forgejo,
+  reachable from any AM-tailnet device (`tailscale serve --bg
+  http://127.0.0.1:8080` → Caddy → Forgejo, verified `200 OK`
+  end-to-end). Git-over-SSH is on `100.78.110.5:2222`. See
+  `geekom/service_map.html` for the full diagram and
+  `services/{forgejo,caddy,dockge}/README.md` for each service's
+  detail — including two gotchas hit and fixed along the way: Forgejo's
+  built-in SSH server conflicting with the image's own `sshd` (crash
+  loop, fixed by explicitly disabling the built-in one), and Brave's
+  Secure DNS breaking MagicDNS resolution client-side (Chromium-only,
+  Firefox unaffected). Next step per `gitandansiblesetupplan.md`:
+  create the Obsidian vault/wiki repos on Forgejo.
+
 - **2026-08-25 — Reconciled `mba13-linux` → `geekom-linux` access, doc
   was stale.** While fixing a stale comment in geekom's
   `~/.ssh/authorized_keys` (still read `am-ma-tailnet@...`, the

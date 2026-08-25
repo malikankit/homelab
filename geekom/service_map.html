@@ -274,7 +274,7 @@
     <h1>What's running on geekom, and how it's reached</h1>
     <div class="status-line">
       <span class="dot" aria-hidden="true"></span>
-      <span>3 containers up · tailscale serve live · verified 200&nbsp;OK end-to-end just now</span>
+      <span>3 containers up · tailscale serve live · Forgejo installed · verified 200&nbsp;OK end-to-end</span>
     </div>
   </header>
 
@@ -307,7 +307,6 @@
       <rect class="node-rect" x="330" y="96" width="270" height="66" rx="9"></rect>
       <text class="node-label" x="350" y="122" font-size="13.5">tailscale serve</text>
       <text class="node-port" x="350" y="142" font-size="12">https :443</text>
-      <text class="pill-text" x="0" y="0"></text>
 
       <!-- caddy -->
       <rect class="node-rect" x="330" y="216" width="270" height="66" rx="9"></rect>
@@ -325,7 +324,7 @@
       <rect class="node-rect" x="660" y="336" width="250" height="90" rx="9"></rect>
       <text class="node-label" x="680" y="363" font-size="13.5">dockge:1</text>
       <text class="node-port" x="680" y="384" font-size="12">:5001 · 127.0.0.1 only</text>
-      <text class="node-sub" x="680" y="404" font-size="10.5">never proxied — full docker-socket access</text>
+      <text class="node-sub" x="680" y="404" font-size="10.5">manages caddy + forgejo stacks too</text>
 
       <!-- docker engine -->
       <rect class="node-rect" x="660" y="466" width="250" height="66" rx="9"></rect>
@@ -357,12 +356,9 @@
       <!-- dockge -> docker engine (control plane) -->
       <line class="edge-control" x1="785" y1="426" x2="785" y2="462" marker-end="url(#arrow-control)"></line>
       <text class="edge-label" x="800" y="450" font-size="11">docker.sock mount</text>
-
-      <!-- verified badge near forgejo -->
-      <rect x="600" y="336" width="0" height="0"></rect>
     </svg>
     <figcaption>
-      Two independent live paths reach Forgejo — the web UI through <span class="mono" style="font-family:'IBM Plex Mono',monospace">tailscale&nbsp;serve → caddy → :3000</span>, and <span style="font-family:'IBM Plex Mono',monospace">git clone</span> traffic straight to its own SSH port <span style="font-family:'IBM Plex Mono',monospace">:2222</span>, entirely bypassing Caddy. Dockge sits outside both: reachable only from geekom itself or an SSH tunnel, never proxied, because its docker-socket mount gives it root-equivalent control over every container shown here.
+      Two independent live paths reach Forgejo — the web UI through <span style="font-family:'IBM Plex Mono',monospace">tailscale&nbsp;serve → caddy → :3000</span>, and <span style="font-family:'IBM Plex Mono',monospace">git clone</span> traffic straight to its own SSH port <span style="font-family:'IBM Plex Mono',monospace">:2222</span>, entirely bypassing Caddy. Dockge sits outside both: reachable only from geekom itself or an SSH tunnel, never proxied, because its docker-socket mount gives it root-equivalent control over every container shown here — the same mount is also how Dockge now manages Caddy's and Forgejo's compose stacks from its own UI (via read-only symlinks back into this repo), not just the ability shown by the dashed arrow.
     </figcaption>
   </figure>
 

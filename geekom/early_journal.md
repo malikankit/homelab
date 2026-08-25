@@ -573,6 +573,110 @@ everything else was renamed. Verified via `chezmoi diff`/`apply`
 (confirmed the diff touched only geekom's `sham`/`sshme` lines).
 Commit: `d26b260`.
 
+5. Reconciled a stale SSH access-map entry; started tracking geekom's `authorized_keys` via chezmoi
+
+While fixing a stale comment in geekom's `~/.ssh/authorized_keys`
+(still read the pre-rename `am-ma-tailnet@...`), found that
+mba13-linux's outbound key was already live there — contradicting
+`HOMELAB.md`'s access map, which listed that path as "not yet"
+authorized. Confirmed intentional; updated the access map and added
+the key's missing row to the key inventory table instead of removing
+it. Also brought geekom's `authorized_keys` under chezmoi management
+(`private_dot_ssh/private_authorized_keys`, preserving `700`/`600`
+perms) — deliberately geekom-only for now, since the file differs per
+host; tracked extending it to mba13-linux/mbp16-mac in `TODO.md`.
+Commit: `3ea0dfd`.
+
+6. Merged the two Mac setup scripts into one shared `basic_setup.sh`
+
+`mba13/zsh_setup_mac.sh` and `mbp16/zsh_setup_mac.sh` were
+near-identical, differing only in the `machine = "..."` line — every
+new setup step had to be hand-copied into both and could silently
+drift (almost did, when vim-plug bootstrapping landed in mbp16's copy
+first). Replaced both with `basic_setup.sh` at the repo root: detects
+which machine it's running on from the hostname, then walks through
+each section (Oh My Zsh, zsh plugins, fzf, chezmoi, vim-plug) one at a
+time, explaining what it's about to do and asking for confirmation —
+so declining a section now and rerunning later just picks up the rest.
+Every section keeps the original idempotency checks. Commit: `3a0178a`.
+
+Two bugs found and fixed shortly after, both from real runs on mbp16-mac:
+
+- **`chezmoi apply` tried to overwrite mbp16's `authorized_keys` with
+  geekom's.** The file (item 5 above) had no machine guard. Fixed via
+  `.chezmoiignore` (which chezmoi processes as a template automatically,
+  no `.tmpl` suffix needed): ignores `.ssh/authorized_keys` whenever
+  `machine != geekom-linux`. Verified by temporarily overriding
+  `chezmoi.toml`'s `machine` value locally. Commit: `a4999a9`.
+- **`raw.githubusercontent.com` is blocked on mbp16's ISP**, breaking
+  the vim-plug `curl` download (and, it turned out, Oh My Zsh's
+  installer script too — same domain). Switched both to `git clone`
+  from `github.com` instead: Oh My Zsh clones straight into
+  `~/.oh-my-zsh`; vim-plug clones to a scratch dir and copies out the
+  one file it needs. Commits: `89749fb`, `4d18de4` (doc update to match).
+
+7. Diagnosed a `sshme -L` tunnel typo and a Brave-specific DNS gotcha
+
+Two separate mbp16-side issues this session, neither a bug in this
+repo: (a) a Dockge SSH tunnel (`sshme -L 5001:localhost:50001 am@6l`)
+had a typo in the remote port (`50001` vs Dockge's actual `5001`),
+confirmed by checking nothing was listening on `50001` on geekom; (b)
+after `sudo tailscale serve --bg http://127.0.0.1:8080` was run
+(Tailscale's CLI syntax changed since the plan was written — the old
+`tailscale serve https / http://...` form is gone), `6l.seahorse-
+enigmatic.ts.net` worked fine via `curl`/`scutil --dns` on mbp16 but
+failed in Brave specifically with `DNS_PROBE_POSSIBLE` — Brave's
+built-in Secure DNS (DoH) bypasses the OS resolver entirely, so it
+never saw Tailscale's MagicDNS answer. Confirmed working in Firefox
+instead. No repo changes for either — both diagnosed and left as
+client-side notes.
+
+8. Forgejo's built-in SSH server conflicted with the image's real `sshd`
+
+After submitting Forgejo's install wizard, the container crash-looped
+on every subsequent start: `bind: address already in use` on `:22`.
+Root cause, found by inspecting the image directly (`docker run
+--entrypoint sh ... find / -iname '*openssh*'`): this Forgejo image
+runs a **real `sshd`** permanently via its own `s6` supervisor
+(unconditional — the intended git-over-SSH mechanism, via
+`AuthorizedKeysCommand` calling `gitea serv`), and
+`FORGEJO__server__START_SSH_SERVER=true` (set when the compose file was
+first written) made Forgejo's own built-in Go SSH server also try to
+bind the same port. Fixed by setting it to explicit `false` — omitting
+the var wasn't enough, since `environment-to-ini` only overrides keys
+it's actually given and won't unset a value already baked into
+`app.ini` from a prior boot. Verified stable (`HTTP 200` locally and
+through the full `tailscale serve → caddy` chain) after recreating the
+container. Commit: `aa2fde2`.
+
+9. Let Dockge manage Caddy and Forgejo through its own UI
+
+Dockge showed `caddy`/`forgejo` as running but "not managed" — it can
+see any container via its `docker.sock` access, but only offers
+start/stop/restart from its UI for stacks whose compose file lives
+under its own `DOCKGE_STACKS_DIR`. Rather than duplicating those
+compose files, mounted `~/code/homelab/services` into the Dockge
+container read-only at the identical host path, then symlinked
+`stacks/caddy` and `stacks/forgejo` back into the repo (created via
+`docker exec dockge ln -s ...`, since the host-side stacks dir is
+root-owned). Read-only mount is deliberate — compose-file edits still
+only happen via git, avoiding two sources of truth. Commit: `525c27b`.
+
+10. Service map diagram, and making its upkeep durable
+
+Built `geekom/service_map.html` — a diagram (HTML + inline SVG) of the
+Docker services on geekom, their ports, and how each is reached
+(`tailscale serve → caddy → forgejo` web UI, direct git-SSH on `:2222`
+bypassing Caddy, Dockge's isolated local/tunnel-only access with its
+`docker.sock` control-plane link). Published as a Claude Artifact, then
+saved into the repo since it's meant to stay current, not a one-time
+snapshot. Commit: `7304a3c`. Added `CLAUDE.md` at the repo root
+documenting that this diagram should be updated in the same batch of
+work as any service change — the file's own comment header wasn't
+durable enough on its own (only surfaces if `service_map.html` happens
+to get opened), so this makes it visible any time this repo is worked
+in. Commit: `eb6c0c4`.
+
 ## Before 2026-Aug-14
 
 

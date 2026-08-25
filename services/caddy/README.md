@@ -15,12 +15,13 @@ to `../forgejo`.
   networking, this keeps it unreachable from the LAN; only
   `tailscale serve` (running on the host, also loopback-only by
   default) fronts it.
-- `tailscale serve https / http://127.0.0.1:8080` terminates TLS using
+- `tailscale serve --bg http://127.0.0.1:8080` terminates TLS using
   this tailnet's HTTPS Certificates feature
   (`6l.seahorse-enigmatic.ts.net`) and forwards to Caddy, which forwards
   to Forgejo. No port is opened on any real network interface at any
   layer — `tailscale serve` handles routing entirely within
-  `tailscaled`.
+  `tailscaled`. **Live as of 2026-08-25** — verified `200 OK` through
+  the full chain.
 
 ## Setup
 
@@ -28,13 +29,32 @@ to `../forgejo`.
 mkdir -p ~/services/state/caddy/{data,config}
 docker compose -f ~/code/homelab/services/caddy/docker-compose.yml up -d
 
-# One-time, needs sudo:
-sudo tailscale serve https / http://127.0.0.1:8080
+# One-time, needs sudo. Note: Tailscale changed this CLI's syntax at
+# some point — the older `tailscale serve https / http://...` form now
+# errors ("the CLI for serve and funnel has changed"). Current form:
+sudo tailscale serve --bg http://127.0.0.1:8080
 ```
+
+Check current state any time with `tailscale serve status`.
 
 Verify from another tailnet device (not geekom itself):
 `https://6l.seahorse-enigmatic.ts.net/` should load Forgejo's UI with a
 valid cert (no browser warning).
+
+### Known gotcha: Chromium browsers (Chrome/Brave/Edge) may fail with DNS_PROBE_POSSIBLE
+
+Even with MagicDNS correctly configured on the client (confirm with
+`scutil --dns | grep -A3 seahorse-enigmatic` on macOS — should show
+`nameserver[0]: 100.100.100.100` for that domain), Brave in particular
+can fail to resolve `*.ts.net` hostnames with `DNS_PROBE_POSSIBLE`.
+Cause: Brave's built-in Secure DNS (DNS-over-HTTPS) bypasses the OS
+resolver entirely and queries a fixed public DoH provider directly,
+which has never heard of your private MagicDNS zone. Fix: **Brave
+Settings → Privacy and security → Security → turn off "Use secure
+DNS"** (or switch it to "with your current service provider" if that
+resolves correctly — off is more reliable for private/split-DNS setups
+like this). Confirmed working in Firefox without any change, since it
+respects the OS resolver by default.
 
 ## Data
 
