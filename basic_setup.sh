@@ -88,11 +88,13 @@ clone_if_missing() {
 # ── Sections ──────────────────────────────────────────────────────────
 
 section_ohmyzsh() {
-  if [[ -d "$HOME/.oh-my-zsh" ]]; then
-    echo "Oh My Zsh already installed — skipping."
-  else
-    RUNZSH=no CHSH=no KEEP_ZSHRC=yes sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
-  fi
+  # Cloned directly (not via the official install.sh, which is fetched
+  # from raw.githubusercontent.com — blocked on some ISPs). ~/.oh-my-zsh
+  # being this clone is all the installer itself actually sets up; it
+  # otherwise also touches ~/.zshrc and offers chsh, both of which we
+  # skip here on purpose (chezmoi manages .zshrc, chsh happens manually,
+  # see the end of this script).
+  clone_if_missing https://github.com/ohmyzsh/ohmyzsh.git "$HOME/.oh-my-zsh"
 }
 
 section_zsh_plugins() {
@@ -137,8 +139,15 @@ section_vim_plugins() {
   if [[ -f "$HOME/.vim/autoload/plug.vim" ]]; then
     echo "vim-plug already installed — skipping."
   else
-    curl -fLo "$HOME/.vim/autoload/plug.vim" --create-dirs \
-      https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+    # Cloned (github.com) rather than curl'd from raw.githubusercontent.com
+    # (blocked on some ISPs) — vim-plug is just the single plug.vim file
+    # in this repo, so clone to a scratch dir and copy it out.
+    local tmpdir
+    tmpdir="$(mktemp -d)"
+    git clone --depth=1 https://github.com/junegunn/vim-plug.git "$tmpdir"
+    mkdir -p "$HOME/.vim/autoload"
+    cp "$tmpdir/plug.vim" "$HOME/.vim/autoload/plug.vim"
+    rm -rf "$tmpdir"
   fi
   vim -es -u "$HOME/.vimrc" -c "PlugInstall --sync" -c "qa"
 }
