@@ -319,6 +319,165 @@ Execution of Phase 1's git-server piece starts next.
 Commit: `7022f21`.
 
 
+## 2026-Aug-22
+
+1. Installed Docker Engine + Compose plugin
+
+Installed via the official Docker apt repo (not the convenience script,
+to match how other packages are installed elsewhere in this repo):
+`docker-ce`, `docker-ce-cli`, `containerd.io`, `docker-compose-plugin`,
+`docker-buildx-plugin`, `docker-ce-rootless-extras`. Added `am` to the
+`docker` group (`sudo usermod -aG docker am`) so compose commands don't
+need `sudo`. Confirmed working with `docker run hello-world`. This
+unblocks Phase 1 of `gitandansiblesetupplan.md` (Dockge, Forgejo,
+Caddy).
+
+2. Decided where self-hosted service state lives, using FHS as a guide
+
+Discussed Linux's FHS (Filesystem Hierarchy Standard — `/etc` config,
+`/var` runtime state, `/opt` third-party software, `/srv` served data)
+as background, then decided against keeping any service's runtime
+data/config inside this git repo. Landed on `~/services/{state,configs}/
+<app>/` on the host, kept entirely separate from the repo's
+`services/<app>/{docker-compose.yml,README.md}` (the reproducible,
+git-tracked part). Compose files reference the host paths directly via
+`docker compose -f <path-in-repo> up -d` — no symlink between the repo
+and `~/services/`.
+
+
+## 2026-Aug-23
+
+1. Dockge compose stack written, then its state path corrected
+
+Wrote `services/dockge/docker-compose.yml` + README (admin UI bound to
+`127.0.0.1:5001` only). First draft used relative `./data`/`./stacks`
+volume paths; per the FHS-informed decision above, rewrote them to
+absolute host paths (`/home/am/services/state/dockge/{data,stacks}`)
+and created those directories. Rewrote `.gitignore` — first to ignore
+the (now-removed) in-repo data dirs, then simplified to just an
+explanatory comment once state moved out of the repo entirely, since
+there's normally nothing under `services/` left to ignore.
+
+Commits: `4bf1eb8` "Add Dockge compose stack (Step 3 of Forgejo setup
+plan)", `b6912c5` "Move Dockge runtime state out of the repo, into
+~/services". Not yet deployed (`docker compose up -d` not run) as of
+this writing.
+
+2. Unexplained SSH access loss — diagnosed as a power-loss reboot
+
+Lost SSH access to geekom and had to reboot it manually to regain
+access. Investigated afterward via `journalctl --list-boots` and
+`journalctl -b -1`: the previous boot's log stream stops abruptly
+mid-stream (last lines are routine `tailscaled`/`kernel` noise at
+19:40:09) with no `Reached target Shutdown`, `Power Off`, or `reboot:
+Restarting system` message — the signature of an actual power loss, not
+a clean shutdown or reboot. Ruled out unattended-upgrades
+(`Automatic-Reboot` was already confirmed off), and nothing in this
+session's own command history around that time issued a restart. Next
+boot didn't start until 2026-08-24 14:51 EDT, meaning geekom was down
+for several hours before being noticed and power-cycled by hand. The
+real fix (BIOS "Restore on AC Power Loss", so the machine powers back on
+by itself after an outage instead of needing a physical button press)
+remains an open, unverified `TODO.md` item — not a UPS, per explicit
+decision (not worth it for this machine).
+
+
+## 2026-Aug-24
+
+1. Shared dotfiles/aliases.sh + SSH tmux auto-attach
+
+Created `dotfiles/aliases.sh` — a single shared, POSIX-safe alias file
+sourced from every machine's `.zshrc` (`ll`, `la`, `l`, `grep --color`,
+`alert`, `hl`, `hlg`, `cr`), with `dotfiles/README.md` documenting the
+convention and why aliases belong in `.zshrc`/`.bashrc` (sourced on
+every interactive shell) rather than `.zprofile`/`.profile`
+(login-shell-only). Added an SSH-triggered tmux auto-attach block to
+`.zshrc`: `exec tmux new-session -A -s main` when `$SSH_CONNECTION` is
+set and not already inside tmux — `exec` avoids a leftover outer shell
+process. Found and fixed live drift in geekom's actual `~/.zshrc` (a
+hand-edited `cr` alias not reflected in the repo copy) while wiring
+this in.
+
+Commit: `1760006`.
+
+2. Migrated dotfile management to chezmoi
+
+Repeated manual-copy drift bugs (an orphaned `trap` line previously, the
+`cr` alias just above) motivated moving off the plain-copy
+`zshrc_backup/` approach entirely. Chose [chezmoi](https://www.chezmoi.io/),
+with its source directory living inside this homelab repo
+(`chezmoi/`, not a separate dotfiles repo) — chezmoi shells out to git,
+which auto-detects the parent repo, so this works with no extra
+plumbing. Installed chezmoi to `~/.local/bin` (no sudo), pointed it at
+the repo via `~/.config/chezmoi/chezmoi.toml` (not git-tracked — the one
+per-machine bootstrap file), and brought `.zshrc`, `.p10k.zsh`,
+`.gitconfig` under management (`chezmoi add`). Retired
+`geekom/zshrc_backup/` (`git rm -r`) and updated every reference to it
+(`mba13/zsh_setup_mac.sh`, `mbp16/zsh_setup_mac.sh`,
+`geekom/zsh_setup.md`) — left `early_journal.md`'s own historical
+mentions of it untouched, since this is an append-only log of what was
+true at the time. Found and fixed a follow-up bug: chezmoi initially
+tried to deploy `chezmoi/README.md` itself into `~/README.md` (every
+file in the source dir is a managed target by default) — fixed with
+`chezmoi/.chezmoiignore`.
+
+Commits: `6705985` "Manage dotfiles with chezmoi instead of manual
+copy-and-sync", `ad79856` "Add .chezmoiignore so chezmoi doesn't try to
+deploy chezmoi/README.md".
+
+3. Extended chezmoi to mba13-mac and mbp16-mac; templated per-machine aliases
+
+Converted `dot_zshrc` to `dot_zshrc.tmpl`, since `.zshrc` isn't identical
+across machines (each has its own SSH-shortcut aliases). The template
+branches on a `machine` value read from that host's own
+`chezmoi.toml` `[data]` section — deliberately not chezmoi's built-in
+`.chezmoi.hostname`, so an OS-level or Tailscale rename doesn't silently
+flip which alias block a machine gets. Rewrote both `mba13/
+zsh_setup_mac.sh` and `mbp16/zsh_setup_mac.sh`: they still install Oh My
+Zsh/plugins/fzf as before, but now also install chezmoi and `chezmoi
+apply` instead of hand-writing `.zshrc` via heredoc. Verified on geekom
+itself first (`chezmoi diff` showed only the intended comment/logic
+change, no unintended drift) before writing the Mac scripts. Not yet run
+on mba13-mac or mbp16-mac as of this writing — needs `git pull` +
+`./<machine>/zsh_setup_mac.sh` on each.
+
+Commit: `b8ced76` "Extend chezmoi bootstrap to mba13-mac and mbp16-mac".
+
+4. Per-connection tmux sessions instead of one shared "main"
+
+The SSH auto-attach added earlier always joined a single `main` tmux
+session, so a second SSH window collided with the first (same
+scrollback, resizing one affected the other). Changed it to
+`tmux new-session -A -s "ssh-$$"` — each SSH connection gets its own
+uniquely named session (`$$` = that shell's PID), while `-A` still
+reattaches cleanly if the same connection's shell is re-entered.
+
+Commit: `83d90c1`.
+
+5. Discovered the tailnet's devices were renamed, and that HTTPS Certificates is now enabled
+
+Found (via `tailscale status`) that all four homelab devices now show
+short Tailscale device names — `6l` (geekom-linux), `13l` (mba13-linux),
+`13m` (mba13-mac), `16m` (mbp16-mac) — not previously recorded in this
+repo. Also confirmed `tailscale cert` no longer reports "HTTPS cert
+support is not enabled" (the blocker noted in the still-pending Forgejo/
+Caddy plan) — the tailnet's MagicDNS/cert domain is
+`seahorse-enigmatic.ts.net`, e.g. geekom is reachable at
+`6l.seahorse-enigmatic.ts.net`. Recorded both in `HOMELAB.md`'s machine
+table. This removes the one manual prerequisite blocking the Caddy +
+`tailscale serve` TLS step of the Forgejo setup plan.
+
+6. Forgejo/Dockge status check
+
+As of this writing: Docker Engine + Compose are installed and `am` is in
+the `docker` group (since 2026-Aug-22 above); `services/dockge/
+docker-compose.yml` exists and its state dirs are created, but the
+container has never been started (`docker compose up -d` not yet run);
+`services/forgejo/` and `services/caddy/` don't exist yet — Forgejo and
+Caddy haven't been started at all. Next concrete step is deploying
+Dockge.
+
+
 ## Before 2026-Aug-14
 
 
