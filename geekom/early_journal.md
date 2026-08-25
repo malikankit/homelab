@@ -477,6 +477,101 @@ container has never been started (`docker compose up -d` not yet run);
 Caddy haven't been started at all. Next concrete step is deploying
 Dockge.
 
+## 2026-Aug-25
+
+1. tmux: shared session with one window per SSH login, instead of one
+   session per login
+
+The per-connection sessions (`ssh-<pid>`) added the day before avoided
+the old shared-`main` scrollback collision, but scattered work across
+many disposable sessions with no single place to see them all. Changed
+the SSH auto-attach block in `dot_zshrc.tmpl`: a new SSH login now opens
+a new *window* inside one shared `main` session (`tmux new-window -t
+main \; attach-session -t main`) if `main` already exists, or creates
+`main` fresh if not — tmux lets different clients attached to the same
+session look at different windows independently, so this doesn't
+reintroduce the collision `main` originally had. Verified via `chezmoi
+diff`, applied, committed.
+
+Commit: `b06b9f8`.
+
+Also scoped out a related idea — using Karabiner's Caps Lock (now
+remapped to a held ⌘⌃⌥⇧ chord on the Macs) as a second tmux prefix
+alongside Ctrl+b — and logged it in `TODO.md` rather than building it,
+since it needs Karabiner/terminal-passthrough details not yet in hand.
+Commit: `c958b81`.
+
+2. Forgejo and Caddy deployed — Phase 1 of `gitandansiblesetupplan.md`
+   substantially done
+
+Wrote and deployed `services/forgejo/docker-compose.yml` (image
+`codeberg.org/forgejo/forgejo:10`, confirmed `10.0.3+gitea-1.22.0`):
+web UI on `127.0.0.1:3000` only, git-over-SSH on port `2222` bound
+directly to geekom's own Tailscale IP (`100.78.110.5`) rather than
+loopback — any AM-tailnet device can reach it, gate is Forgejo's own
+per-user SSH key auth, same exposure model already in place for
+everything else on this tailnet (see `HOMELAB.md`'s Tailscale/ufw-bypass
+note). `DOMAIN`/`ROOT_URL`/`SSH_DOMAIN` pre-filled to
+`6l.seahorse-enigmatic.ts.net`; `DISABLE_REGISTRATION=true` set from the
+start. Verified locally (`curl` → 200, logs show SSH host keys
+generated and the install page ready). Commit: `954cbde`.
+
+Wrote and deployed `services/caddy/{docker-compose.yml,Caddyfile}`:
+runs with `network_mode: host` so it can reach Forgejo at
+`127.0.0.1:3000` without a shared docker network between the two
+independent compose projects, but the Caddyfile explicitly binds to
+`127.0.0.1:8080` so host networking doesn't actually expose anything on
+the LAN. Reverse-proxies plain HTTP to Forgejo — no TLS in Caddy itself,
+since that's `tailscale serve`'s job. Verified the full local chain
+(`curl http://127.0.0.1:8080/` → 200, i.e. Caddy → Forgejo working)
+before touching Tailscale at all. Commit: `dcd76c7`.
+
+Wrote a full file-by-file setup log
+(`services/dockge_forgejo_caddy_setup_log.md`, not committed — kept as
+a working doc) covering every file's exact content and the reasoning
+behind each setting, for review before going further.
+
+**Still open, needs the user directly** (interactive sudo, can't be
+scripted from here): `sudo tailscale serve https / http://127.0.0.1:8080`
+on geekom, to actually expose Forgejo over Tailscale HTTPS at
+`https://6l.seahorse-enigmatic.ts.net/`. Until that runs, Forgejo is
+only reachable locally on geekom. Also still pending: confirm Dockge's
+and Forgejo's admin accounts actually got created (containers are up,
+but account-creation status isn't confirmed), create the Obsidian-vault
+repo in Forgejo, verify `git clone ssh://git@100.78.110.5:2222/...` from
+a peer machine, then update `HOMELAB.md`.
+
+3. Markdown preview added to vim
+
+No `.vimrc` existed before this. Installed vim-plug (single-file plugin
+manager, no external deps) to `~/.vim/autoload/plug.vim`, and added
+`chezmoi/dot_vimrc` declaring `previm` + `open-browser.vim` for
+Markdown live preview (`:PrevimOpen` — opens in the default browser,
+auto-refreshes on save). Chose previm over
+Node-based alternatives (e.g. `markdown-preview.nvim`) because geekom
+has no Node/npm installed but does have `python3`, which previm's
+preview server can use directly. Installed the plugins
+(`vim -es -u ~/.vimrc -c "PlugInstall --sync" -c "qa"`), confirmed both
+landed in `~/.vim/plugged/`. `.vimrc` is now chezmoi-tracked alongside
+`.zshrc`/`.p10k.zsh`/`.gitconfig`; vim-plug itself stays unmanaged
+(external tool, same convention as Oh My Zsh), with its install command
+documented in `chezmoi/README.md`. Commit: `b706d2e`.
+
+4. `sshme` alias added to all 4 machines; fixed a stale key filename
+
+Added a host-less `sshme` alias per machine — `ssh -i <that machine's
+own tailnet identity key>`, so you append the target yourself
+(`sshme am@<ip>`) — to `dot_zshrc.tmpl`'s per-machine branches. Added a
+branch for `mba13-linux` (previously absent from this template) just
+for this alias, since it has its own tailnet key
+(`mba13-linux_to_tailnet_ed25519`) but wasn't otherwise templated.
+While doing this, found and fixed a stale reference: the existing
+`sham` alias pointed at `~/.ssh/am6_to_tailnet_ed25519`, the pre-rename
+filename from before the 2026-08-22 hostname migration — the real file
+on disk is `geekom-linux_to_tailnet_ed25519`; the alias was missed when
+everything else was renamed. Verified via `chezmoi diff`/`apply`
+(confirmed the diff touched only geekom's `sham`/`sshme` lines).
+Commit: `d26b260`.
 
 ## Before 2026-Aug-14
 
