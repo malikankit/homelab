@@ -1,5 +1,32 @@
 # Homelab TODO
 
+## High priority
+
+- [ ] **Create the Obsidian vault repo + a wiki repo on Forgejo.**
+  Log into `https://6l.seahorse-enigmatic.ts.net/`, create two private
+  repos (registration is disabled, so this is admin-account-only).
+  Next concrete step per `gitandansiblesetupplan.md`'s checklist.
+- [ ] **Configure `obsidian-git` on your desktop**, pointed at the new
+  vault repo, using Forgejo's per-user SSH key auth over the already-live
+  `100.78.110.5:2222`.
+- [ ] **Test the sync loop end-to-end**: edit a note → auto-commit →
+  push → pull on a second device.
+- [ ] **Push this `homelab` repo to Forgejo too**, not just GitHub — so
+  compose files/READMEs are mirrored there per the original plan.
+- [ ] **geekom: decide on LUKS remote-unlock strategy.** Root disk is
+  LUKS-encrypted — geekom has no network stack after any reboot until
+  someone physically types the passphrase, which already caused an
+  extended outage once (see the 2026-Aug-23 power-loss incident in
+  `geekom/early_journal.md`). See "Open" below for detail.
+- [ ] **geekom: check BIOS "restore power after AC loss" setting.**
+  Same incident — confirm geekom actually auto-boots after a real power
+  outage. See "Open" below for detail.
+- [ ] **Decide how to fix the Tailscale/ufw bypass.** Real reachability
+  today is governed by Tailscale ACLs + sshd auth, not the per-machine
+  ufw allowlists this repo otherwise documents as the security
+  boundary — a live gap between documented and actual posture. See
+  "Open" below for detail.
+
 ## Open
 
 - [ ] **Extend chezmoi tracking of `authorized_keys` to mba13-linux and
