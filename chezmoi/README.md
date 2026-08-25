@@ -33,9 +33,12 @@ only changes when `chezmoi.toml` is deliberately updated. See
 
 ## Bootstrapping a new machine
 
-On geekom and mba13-mac/mbp16-mac (via `mba13/zsh_setup_mac.sh` /
-`mbp16/zsh_setup_mac.sh`), this is done automatically. To do it by hand,
-or on a new machine:
+On mba13-mac/mbp16-mac, this is done automatically via `../basic_setup.sh`
+at the repo root (a shared, section-by-section confirmed script — see
+its own header comment) — it detects which of those two machines it's
+running on and sets `machine` accordingly. geekom was bootstrapped by
+hand, not via a script. To do it by hand, or on a new machine
+`basic_setup.sh` doesn't yet recognize:
 
 ```bash
 # 1. Clone/pull this repo to ~/code/homelab first (existing convention).
