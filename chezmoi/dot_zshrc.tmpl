@@ -97,13 +97,18 @@ fi
 # renamed at the OS level without the chezmoi config being touched.
 {{- $machine := .machine | default "" }}
 {{- if eq $machine "geekom-linux" }}
-alias sham="ssh -i ~/.ssh/am6_to_tailnet_ed25519 am@100.105.210.109"
+alias sham="ssh -i ~/.ssh/geekom-linux_to_tailnet_ed25519 am@100.105.210.109"
+alias sshme="ssh -i ~/.ssh/geekom-linux_to_tailnet_ed25519"
+{{- else if eq $machine "mba13-linux" }}
+alias sshme="ssh -i ~/.ssh/mba13-linux_to_tailnet_ed25519"
 {{- else if eq $machine "mba13-mac" }}
 alias hlm="cd ~/code/homelab/mba13/"
 alias sshg="ssh -i ~/.ssh/mba13-mac_to_tailnet am@100.78.110.5"       # geekom-linux
 alias sshl="ssh -i ~/.ssh/mba13-mac_to_tailnet am@100.105.210.109"    # mba13-linux (other boot, same hardware)
+alias sshme="ssh -i ~/.ssh/mba13-mac_to_tailnet"
 {{- else if eq $machine "mbp16-mac" }}
 alias hlp="cd ~/code/homelab/mbp16/"
 alias sshg="ssh -i ~/.ssh/id_rsa am@100.78.110.5"       # geekom-linux
 alias sshm="ssh -i ~/.ssh/id_rsa am@100.105.210.109"    # mba13-linux
+alias sshme="ssh -i ~/.ssh/id_rsa"
 {{- end }}
