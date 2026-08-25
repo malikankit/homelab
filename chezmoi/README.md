@@ -61,9 +61,12 @@ EOF
 
 # 5. .vimrc references vim-plug, which isn't chezmoi-managed (external
 #    tool, same convention as Oh My Zsh) — install it, then install the
-#    plugins it declares:
-curl -fLo ~/.vim/autoload/plug.vim --create-dirs \
-  https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+#    plugins it declares. Cloned rather than curl'd from
+#    raw.githubusercontent.com, which is blocked on some ISPs:
+git clone --depth=1 https://github.com/junegunn/vim-plug.git /tmp/vim-plug
+mkdir -p ~/.vim/autoload
+cp /tmp/vim-plug/plug.vim ~/.vim/autoload/plug.vim
+rm -rf /tmp/vim-plug
 vim -es -u ~/.vimrc -c "PlugInstall --sync" -c "qa"
 ```
 
