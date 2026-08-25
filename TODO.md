@@ -9,15 +9,15 @@
   ~/onedrive_downloads/93F1AF98-1DA2-4FC6-8AA1-F32F1515AAA9 --progress`,
   running in the user's own tmux session. Check it actually completed
   (file count/size sanity check against OneDrive) once done.
-- [ ] **Create the Obsidian vault repo + a wiki repo on Forgejo.**
-  Log into `https://6l.seahorse-enigmatic.ts.net/`, create two private
-  repos (registration is disabled, so this is admin-account-only).
-  Next concrete step per `gitandansiblesetupplan.md`'s checklist.
-- [ ] **Configure `obsidian-git` on your desktop**, pointed at the new
-  vault repo, using Forgejo's per-user SSH key auth over the already-live
-  `100.78.110.5:2222`.
+- [x] **Create the Obsidian vault repo + a wiki repo on Forgejo.**
+  Done — `obs` (vault) and `llmwiki` (LLM-generated wiki, pipeline
+  TBD), both private, both empty. See `obsidian_sync_setup.md`.
+- [x] **Configure `obsidian-git` on desktop(s)**, using Forgejo's
+  per-user SSH key auth over `100.78.110.5:2222`. Done on both
+  mba13-mac and mbp16-mac, each with its own dedicated key. See
+  `obsidian_sync_setup.md` for the full runbook.
 - [ ] **Test the sync loop end-to-end**: edit a note → auto-commit →
-  push → pull on a second device.
+  push → pull on a second device. Not yet separately confirmed.
 - [ ] **Push this `homelab` repo to Forgejo too**, not just GitHub — so
   compose files/READMEs are mirrored there per the original plan.
 - [ ] **geekom: decide on LUKS remote-unlock strategy.** Root disk is
