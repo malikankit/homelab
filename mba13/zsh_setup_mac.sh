@@ -78,8 +78,19 @@ echo "chezmoi diff (preview of what's about to change in \$HOME):"
 echo
 "$HOME/.local/bin/chezmoi" apply -v
 
+# --- vim-plug + plugins (for .vimrc's Markdown preview setup) ---
+# vim-plug itself and the plugins it declares aren't chezmoi-managed
+# (external tools, same convention as Oh My Zsh above) — only .vimrc is.
+if [[ -f "$HOME/.vim/autoload/plug.vim" ]]; then
+  echo "vim-plug already installed — skipping."
+else
+  curl -fLo "$HOME/.vim/autoload/plug.vim" --create-dirs \
+    https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+fi
+vim -es -u "$HOME/.vimrc" -c "PlugInstall --sync" -c "qa"
+
 echo
-echo "Done. ~/.zshrc, ~/.p10k.zsh, ~/.gitconfig are now chezmoi-managed."
+echo "Done. ~/.zshrc, ~/.p10k.zsh, ~/.gitconfig, ~/.vimrc are now chezmoi-managed."
 echo "Edit them via the source files in $CHEZMOI_SOURCE, then 'chezmoi diff' / 'chezmoi apply'."
 if [[ "$SHELL" != *zsh* ]]; then
   echo "Current login shell is $SHELL — run 'chsh -s $(which zsh)' to make zsh"
