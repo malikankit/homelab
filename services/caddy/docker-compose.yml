@@ -1,0 +1,14 @@
+services:
+  caddy:
+    image: caddy:2
+    container_name: caddy
+    restart: unless-stopped
+    # Host networking so the Caddyfile can reach Forgejo at its published
+    # 127.0.0.1:3000 without needing a shared docker network with the
+    # forgejo compose stack. Caddyfile explicitly binds to 127.0.0.1, so
+    # this doesn't expose anything on the LAN despite host networking.
+    network_mode: host
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - /home/am/services/state/caddy/data:/data
+      - /home/am/services/state/caddy/config:/config
