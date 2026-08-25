@@ -53,8 +53,15 @@ sourceDir = "$HOME/code/homelab/chezmoi"
     machine = "<geekom-linux|mba13-mac|mbp16-mac|...>"
 EOF
 
-# 4. Apply — writes .zshrc/.p10k.zsh/.gitconfig into ~/:
+# 4. Apply — writes .zshrc/.p10k.zsh/.gitconfig/.vimrc into ~/:
 ~/.local/bin/chezmoi apply
+
+# 5. .vimrc references vim-plug, which isn't chezmoi-managed (external
+#    tool, same convention as Oh My Zsh) — install it, then install the
+#    plugins it declares:
+curl -fLo ~/.vim/autoload/plug.vim --create-dirs \
+  https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+vim -es -u ~/.vimrc -c "PlugInstall --sync" -c "qa"
 ```
 
 `~/.config/chezmoi/chezmoi.toml` itself is not tracked here — it's the
@@ -81,8 +88,8 @@ where to find its source directory and what its `machine` name is.
 
 ## What's tracked here vs. not
 
-Tracked: `.zshrc`, `.p10k.zsh`, `.gitconfig` — config with no secrets
-in it. **Not** tracked, and shouldn't be added: `.ssh/`, `.gnupg/`,
+Tracked: `.zshrc`, `.p10k.zsh`, `.gitconfig`, `.vimrc` — config with no
+secrets in it. **Not** tracked, and shouldn't be added: `.ssh/`, `.gnupg/`,
 anything under `.config/` with API keys/tokens, shell history files,
 caches (`.zcompdump*`, `.cache/`), or other app-generated state. If in
 doubt before `chezmoi add`-ing something, check it for embedded

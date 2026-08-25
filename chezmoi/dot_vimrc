@@ -1,0 +1,23 @@
+" ═══════════════════════════════════════════════════════
+" Plugin manager — vim-plug
+" ═══════════════════════════════════════════════════════
+" Not managed here — installed directly per machine, same convention as
+" Oh My Zsh in zsh_setup.md:
+"   curl -fLo ~/.vim/autoload/plug.vim --create-dirs \
+"     https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+call plug#begin('~/.vim/plugged')
+
+" Markdown live preview — opens in the default browser, auto-refreshes
+" on save. previm runs its own local preview server using whichever of
+" python/ruby/php it finds (python3 here, no Node/npm needed).
+Plug 'tyru/open-browser.vim'
+Plug 'kannokanno/previm'
+
+call plug#end()
+
+" previm shells out to open-browser.vim, whose default already picks
+" the right opener (xdg-open on Linux, open on macOS) — no g:previm_open_cmd
+" override needed, so this works unmodified on geekom-linux, mba13-linux,
+" mba13-mac, and mbp16-mac alike.
+
+" Markdown preview: ':PrevimOpen' while editing a .md file.
