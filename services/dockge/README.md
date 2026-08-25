@@ -29,14 +29,36 @@ docker compose -f ~/code/homelab/services/dockge/docker-compose.yml up -d
 First visit to `http://localhost:5001` prompts you to create the admin
 account.
 
+## Managing other stacks in this repo through Dockge's UI
+
+Dockge can see every running container regardless of how it was
+started (it has Docker-socket access), but only offers full management
+(start/stop/restart from its UI) for stacks whose compose file lives
+under its own `DOCKGE_STACKS_DIR` (`~/services/state/dockge/stacks/` on
+the host). To manage a repo-tracked stack (e.g. `../caddy`,
+`../forgejo`) through Dockge without duplicating its compose file:
+
+```bash
+# One-time per stack, run as root inside the container (the host-side
+# stacks dir is root-owned):
+docker exec dockge ln -s /home/am/code/homelab/services/<name> /opt/stacks/<name>
+```
+
+This only resolves because the compose file also has to explicitly
+mount `~/code/homelab/services` into the container (read-only) at the
+identical absolute path — already set up in this stack's
+`docker-compose.yml`. Read-only on purpose: compose-file edits should
+still only happen via git, never Dockge's UI, so there's one source of
+truth. Caddy and Forgejo are symlinked in this way as of 2026-08-25.
+
 ## Data / backup
 
 - `~/services/state/dockge/data/` — Dockge's own app data (accounts,
   settings)
-- `~/services/state/dockge/stacks/` — every compose stack Dockge
-  manages (including this homelab's Forgejo/Caddy stacks, once deployed
-  through it) lives here as plain files, not a database — back up by
-  copying this directory.
+- `~/services/state/dockge/stacks/` — Dockge-native stacks live here as
+  plain files; `caddy`/`forgejo` are symlinks back into the repo (see
+  above), not copies — nothing to back up for those beyond the repo
+  itself.
 
 ## Port
 

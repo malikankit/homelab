@@ -9,5 +9,11 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - /home/am/services/state/dockge/data:/app/data
       - /home/am/services/state/dockge/stacks:/opt/stacks
+      # Read-only, mounted at the identical host path so symlinks placed
+      # in /opt/stacks pointing at repo compose files (e.g. ../caddy,
+      # ../forgejo) resolve correctly from inside this container. Read-only
+      # so compose-file edits still only happen via git, never Dockge's UI —
+      # avoids two sources of truth for the same file.
+      - /home/am/code/homelab/services:/home/am/code/homelab/services:ro
     environment:
       - DOCKGE_STACKS_DIR=/opt/stacks
