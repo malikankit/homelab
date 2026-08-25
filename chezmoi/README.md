@@ -89,8 +89,18 @@ where to find its source directory and what its `machine` name is.
 ## What's tracked here vs. not
 
 Tracked: `.zshrc`, `.p10k.zsh`, `.gitconfig`, `.vimrc` — config with no
-secrets in it. **Not** tracked, and shouldn't be added: `.ssh/`, `.gnupg/`,
-anything under `.config/` with API keys/tokens, shell history files,
-caches (`.zcompdump*`, `.cache/`), or other app-generated state. If in
-doubt before `chezmoi add`-ing something, check it for embedded
-secrets first.
+secrets in it. Also `.ssh/authorized_keys` (**only** this one file under
+`.ssh/`, as `private_dot_ssh/private_authorized_keys` — the `private_`
+prefix preserves `.ssh`'s `700`/`authorized_keys`'s `600` permissions on
+apply) — it's just public keys, safe to track, but **differs per
+machine** (each host authorizes different peers), so unlike the shared
+dotfiles above it isn't meant to be applied identically everywhere.
+Currently only geekom's is tracked; see `TODO.md` for extending this to
+`mba13-linux`/`mbp16-mac`.
+
+**Not** tracked, and shouldn't be added: anything else under `.ssh/`
+(private keys, `known_hosts`, `config`), `.gnupg/`, anything under
+`.config/` with API keys/tokens, shell history files, caches
+(`.zcompdump*`, `.cache/`), or other app-generated state. If in doubt
+before `chezmoi add`-ing something, check it for embedded secrets
+first.

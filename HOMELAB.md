@@ -73,12 +73,15 @@ new IP added to the allowlist on every existing machine it needs to reach.
 | From \ To          | geekom-linux (geekom)        | mba13-linux (mba13)        | mbp16-mac (mbp16) | mba13-mac (mba13) |
 |---------------------|----------------------|------------------------|--------------------|--------------------|
 | **geekom-linux (geekom)**    | —                    | key added, blocked by mba13-linux's ufw allowlist (geekom-linux's IP not yet added) | not yet            | n/a — mba13-mac is inbound-blocked |
-| **mba13-linux (mba13)**   | not yet              | —                      | not yet            | n/a — mba13-mac is inbound-blocked |
+| **mba13-linux (mba13)**   | yes (authorized)     | —                      | not yet            | n/a — mba13-mac is inbound-blocked |
 | **mbp16-mac (mbp16)** | yes (authorized)   | yes (authorized)       | —                  | n/a — mba13-mac is inbound-blocked |
 | **mba13-mac (mba13)** | yes (authorized)   | not yet       | n/a                  | — |
 
 `mbp16-mac` currently has inbound SSH authorized on both `geekom-linux` and
-`mba13-linux`. `geekom-linux` → `mba13-linux`: the key is in `mba13-linux`'s `authorized_keys`, but
+`mba13-linux`. `mba13-linux` → `geekom-linux`: `mba13-linux`'s outbound key
+(`mba13-linux_to_tailnet_ed25519.pub`) is authorized in `geekom-linux`'s
+`authorized_keys` — this was already live but missing from this table
+until it was noticed and reconciled here. `geekom-linux` → `mba13-linux`: the key is in `mba13-linux`'s `authorized_keys`, but
 `mba13-linux`'s ufw allowlist doesn't include `geekom-linux`'s IP (`100.78.110.5`) yet —
 needs `sudo ufw allow in on tailscale0 from 100.78.110.5 to any port 22
 proto tcp comment 'SSH from geekom-linux'` on `mba13-linux`. `mba13-mac` is
@@ -102,6 +105,7 @@ private keys never leave the machine they were generated on.
 | `mbp16/id_rsa.pub` | mbp16-mac | mbp16-mac → other AM-tailnet hosts (currently authorized on geekom-linux, mba13-linux) |
 | `mbp16/aa_am_ed25519.pub` | mbp16-mac | Login to Zenith network only |
 | `mba13/mba13-mac_to_tailnet.pub` | mba13-mac | mba13-mac → other AM-tailnet hosts (currently authorized on geekom-linux). Outbound only — mba13-mac itself has no inbound key to authorize since nothing SSHes into it. |
+| `mba13/mba13-linux_to_tailnet_ed25519.pub` | mba13-linux | mba13-linux → other AM-tailnet hosts (currently authorized on geekom-linux) |
 
 Convention going forward: **one key per trust boundary** (GitHub vs.
 inter-host AM-tailnet SSH vs. Zenith), never reused across boundaries.
@@ -125,6 +129,16 @@ tooling applies directly — only `mbp16` and `mba13-mac` (macOS) need
 different tooling (Application Firewall / `pf` instead of `ufw`).
 
 ## Changelog
+
+- **2026-08-25 — Reconciled `mba13-linux` → `geekom-linux` access, doc
+  was stale.** While fixing a stale comment in geekom's
+  `~/.ssh/authorized_keys` (still read `am-ma-tailnet@...`, the
+  pre-rename identity), found that `mba13-linux`'s outbound key was
+  already present and live there — contradicting this table's "not
+  yet" entry for that path. Confirmed intentional; updated the SSH
+  access map and added the missing `mba13-linux_to_tailnet_ed25519.pub`
+  row to the key inventory table (it was never added when the key was
+  actually granted).
 
 - **2026-08-22 — mba13-mac scoped to outbound-only.** Decided mba13-mac
   will never be SSH'd into, only used to SSH out to other AM-tailnet
