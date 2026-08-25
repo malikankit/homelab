@@ -16,12 +16,26 @@ plain `git` commands both work fine run from here.
 
 chezmoi source files drop the leading `.` and prefix it with `dot_`
 (e.g. `.zshrc` → `dot_zshrc`) so they aren't hidden files inside the
-repo itself. See chezmoi's
-[source state docs](https://www.chezmoi.io/reference/source-state-attributes/)
-for the rest of its naming conventions if you add templated or
-per-machine-conditional files later.
+repo itself. A `.tmpl` suffix (`dot_zshrc.tmpl`) marks a templated file —
+see [source state docs](https://www.chezmoi.io/reference/source-state-attributes/)
+for the rest of chezmoi's naming conventions.
+
+`dot_zshrc.tmpl` is templated because `.zshrc` isn't identical across
+machines — each has its own machine-specific aliases (e.g. `sham` on
+geekom-linux, `sshg`/`sshl` on mba13-mac). The template branches on a
+`machine` variable (see "Bootstrapping a new machine" below) rather than
+chezmoi's own `.chezmoi.hostname`, so renaming a machine at the OS or
+Tailscale level doesn't silently change which alias block it gets — that
+only changes when `chezmoi.toml` is deliberately updated. See
+`../HOMELAB.md` for the machine name ↔ Tailscale short-name mapping
+(`geekom-linux`=`6l`, `mba13-linux`=`13l`, `mba13-mac`=`13m`,
+`mbp16-mac`=`16m`).
 
 ## Bootstrapping a new machine
+
+On geekom and mba13-mac/mbp16-mac (via `mba13/zsh_setup_mac.sh` /
+`mbp16/zsh_setup_mac.sh`), this is done automatically. To do it by hand,
+or on a new machine:
 
 ```bash
 # 1. Clone/pull this repo to ~/code/homelab first (existing convention).
@@ -29,9 +43,15 @@ per-machine-conditional files later.
 # 2. Install chezmoi (no sudo needed, installs to ~/.local/bin):
 sh -c "$(curl -fsSL https://get.chezmoi.io)" -- -b ~/.local/bin
 
-# 3. Point chezmoi at this repo's chezmoi/ folder as its source:
+# 3. Point chezmoi at this repo's chezmoi/ folder as its source, and set
+#    this machine's name for dot_zshrc.tmpl's per-machine sections:
 mkdir -p ~/.config/chezmoi
-echo 'sourceDir = "'"$HOME"'/code/homelab/chezmoi"' > ~/.config/chezmoi/chezmoi.toml
+cat > ~/.config/chezmoi/chezmoi.toml <<EOF
+sourceDir = "$HOME/code/homelab/chezmoi"
+
+[data]
+    machine = "<geekom-linux|mba13-mac|mbp16-mac|...>"
+EOF
 
 # 4. Apply — writes .zshrc/.p10k.zsh/.gitconfig into ~/:
 ~/.local/bin/chezmoi apply
@@ -39,7 +59,7 @@ echo 'sourceDir = "'"$HOME"'/code/homelab/chezmoi"' > ~/.config/chezmoi/chezmoi.
 
 `~/.config/chezmoi/chezmoi.toml` itself is not tracked here — it's the
 one small bootstrap step every machine needs before chezmoi knows
-where to find its source directory.
+where to find its source directory and what its `machine` name is.
 
 ## Day-to-day workflow
 

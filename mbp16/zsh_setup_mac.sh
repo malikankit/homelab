@@ -1,25 +1,27 @@
 #!/usr/bin/env bash
 # Set up zsh on mbp16-mac to match geekom-linux's setup: Oh My Zsh +
-# Powerlevel10k + the same plugin set. See ../geekom/zsh_setup.md for the
+# Powerlevel10k + the same plugin set, with .zshrc / .p10k.zsh /
+# .gitconfig managed by chezmoi (source: ../chezmoi/ in this same repo
+# clone — see ../chezmoi/README.md). See ../geekom/zsh_setup.md for the
 # reference setup this mirrors.
 #
 # Self-contained: run this from a clone of the homelab repo already on
-# this machine. It pulls ~/.p10k.zsh straight from ../chezmoi/ (geekom's
-# chezmoi-managed source of truth) in this same repo clone — no manual
-# file copying from geekom needed.
+# this machine.
 #
-# Idempotent: safe to re-run; skips anything already cloned/installed,
-# and backs up any existing ~/.zshrc / ~/.p10k.zsh before overwriting.
+# Idempotent: safe to re-run; skips anything already cloned/installed.
+# chezmoi apply overwrites ~/.zshrc, ~/.p10k.zsh, ~/.gitconfig with the
+# repo's managed versions — back them up first if you have uncommitted
+# local edits to any of those three files.
 #
 # Usage: ./zsh_setup_mac.sh
 
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-P10K_SRC="$REPO_ROOT/chezmoi/dot_p10k.zsh"
+CHEZMOI_SOURCE="$REPO_ROOT/chezmoi"
 
-if [[ ! -f "$P10K_SRC" ]]; then
-  echo "ERROR: $P10K_SRC not found — is this a clone of the homelab repo?" >&2
+if [[ ! -d "$CHEZMOI_SOURCE" ]]; then
+  echo "ERROR: $CHEZMOI_SOURCE not found — is this a clone of the homelab repo?" >&2
   exit 1
 fi
 
@@ -55,78 +57,30 @@ else
 fi
 "$HOME/.fzf/install" --key-bindings --completion --no-update-rc --no-bash --no-fish
 
-# --- Back up any existing config before overwriting ---
-TS="$(date +%Y%m%d_%H%M%S)"
-[[ -f "$HOME/.zshrc" ]] && cp "$HOME/.zshrc" "$HOME/.zshrc.bak.$TS"
-[[ -f "$HOME/.p10k.zsh" ]] && cp "$HOME/.p10k.zsh" "$HOME/.p10k.zsh.bak.$TS"
+# --- chezmoi ---
+if [[ -x "$HOME/.local/bin/chezmoi" ]]; then
+  echo "chezmoi already installed — skipping."
+else
+  sh -c "$(curl -fsSL https://get.chezmoi.io)" -- -b "$HOME/.local/bin"
+fi
 
-cp "$P10K_SRC" "$HOME/.p10k.zsh"
+mkdir -p "$HOME/.config/chezmoi"
+cat > "$HOME/.config/chezmoi/chezmoi.toml" <<EOF
+sourceDir = "$CHEZMOI_SOURCE"
 
-cat > "$HOME/.zshrc" <<'EOF'
-# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
-# Initialization code that may require console input (password prompts, [y/n]
-# confirmations, etc.) must go above this block; everything else may go below.
-# Powerlevel10k instant prompt — disabled along with the theme below.
-# Uncomment if re-enabling Powerlevel10k.
-# if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
-#   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
-# fi
-
-# ═══════════════════════════════════════════════════════
-# Oh My Zsh
-# ═══════════════════════════════════════════════════════
-export ZSH="$HOME/.oh-my-zsh"
-
-# Powerlevel10k disabled in favor of a plain bash-style prompt (see below) —
-# no icons/Nerd Font/terminal-escape-sequence support needed, works
-# identically in every terminal. Set back to "powerlevel10k/powerlevel10k"
-# any time to re-enable it (also uncomment the instant-prompt block above
-# and the source line in the Prompt section below).
-ZSH_THEME=""
-
-plugins=(
-  git
-  z
-  fzf
-  zsh-autosuggestions
-  zsh-syntax-highlighting   # must stay last in this list
-  zsh-completions
-)
-
-source $ZSH/oh-my-zsh.sh
-
-# ═══════════════════════════════════════════════════════
-# Prompt — plain bash-style: user@host:path$
-# ═══════════════════════════════════════════════════════
-# Powerlevel10k is still installed (~/.p10k.zsh) but disabled above in
-# favor of this. Re-enable by setting ZSH_THEME back above and
-# uncommenting the line below (plus the instant-prompt block at the top).
-# [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
-PROMPT='%n@%m:%~$ '
-
-# ═══════════════════════════════════════════════════════
-# fzf (Ctrl+R history search, Ctrl+T file find, Alt+C cd)
-# ═══════════════════════════════════════════════════════
-[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
-
-# ═══════════════════════════════════════════════════════
-# Aliases — shared ones live in the homelab repo, one copy for every
-# machine (see dotfiles/README.md for the convention).
-# ═══════════════════════════════════════════════════════
-[ -f ~/code/homelab/dotfiles/aliases.sh ] && source ~/code/homelab/dotfiles/aliases.sh
-
-# Machine-specific (not in the shared file)
-alias hlp="cd ~/code/homelab/mbp16/"
-
-# SSH to other AM-tailnet hosts — uses mbp16-mac's existing inter-host key
-# (see ../HOMELAB.md SSH key inventory: mbp16/id_rsa.pub, already
-# authorized on geekom-linux and mba13-linux).
-alias sshg="ssh -i ~/.ssh/id_rsa am@100.78.110.5"       # geekom-linux
-alias sshm="ssh -i ~/.ssh/id_rsa am@100.105.210.109"    # mba13-linux
+[data]
+    machine = "mbp16-mac"
 EOF
 
 echo
-echo "Done. ~/.zshrc and ~/.p10k.zsh are in place."
+echo "chezmoi diff (preview of what's about to change in \$HOME):"
+"$HOME/.local/bin/chezmoi" diff
+echo
+"$HOME/.local/bin/chezmoi" apply -v
+
+echo
+echo "Done. ~/.zshrc, ~/.p10k.zsh, ~/.gitconfig are now chezmoi-managed."
+echo "Edit them via the source files in $CHEZMOI_SOURCE, then 'chezmoi diff' / 'chezmoi apply'."
 if [[ "$SHELL" != *zsh* ]]; then
   echo "Current login shell is $SHELL — run 'chsh -s $(which zsh)' to make zsh"
   echo "default (needs your account password; log out/in after)."

@@ -3,7 +3,7 @@
 Switched geekom's interactive shell from bash to zsh: Oh My Zsh +
 Powerlevel10k + a standard productivity plugin set. `.zshrc` and `.p10k.zsh`
 are managed by [chezmoi](https://www.chezmoi.io/) (source: `../chezmoi/` at
-the repo root, `dot_zshrc`/`dot_p10k.zsh`) — see `../chezmoi/README.md` for
+the repo root, `dot_zshrc.tmpl`/`dot_p10k.zsh`) — see `../chezmoi/README.md` for
 the edit/apply workflow. This replaced an earlier plain-copy backup
 (`zshrc_backup/`, retired 2026-08-24) that required manually keeping the
 repo copy and the live `~/.zshrc` in sync by hand.

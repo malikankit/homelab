@@ -7,17 +7,25 @@ trust model, and SSH access map. Open follow-ups live in `TODO.md`.
 
 ## Machines
 
-| Physical name | Tailnet hostname | Repo folder | OS | AM-tailnet IP |
-|---|---|---|---|---|
-| geekom | geekom-linux | `geekom/` | Ubuntu 26.04 (desktop) | `100.78.110.5` |
-| mba13 | mba13-linux | `mba13/` | Asahi Linux (2nd partition — mba13 dual-boots macOS + Asahi; `mba13-linux` is the tailnet identity of the Asahi boot, not macOS) | `100.105.210.109` |
-| mba13 | mba13-mac | `mba13/` | macOS (1st partition — the other boot of the same physical machine as `mba13-linux`) | on the AM Tailscale network; **outbound-only** — "Disable incoming connections" is on in the Tailscale app, so it can SSH out to other hosts but nothing can SSH into it; see `mba13/todo_mba13-mac_onboard.md` |
-| mbp16 | mbp16-mac | `mbp16/` | macOS | `100.87.74.44` (also has a separate Zenith-network IP, `100.108.204.52`, when logged into Zenith instead) |
+| Physical name | Tailnet hostname | Tailscale short name | Repo folder | OS | AM-tailnet IP |
+|---|---|---|---|---|---|
+| geekom | geekom-linux | `6l` | `geekom/` | Ubuntu 26.04 (desktop) | `100.78.110.5` |
+| mba13 | mba13-linux | `13l` | `mba13/` | Asahi Linux (2nd partition — mba13 dual-boots macOS + Asahi; `mba13-linux` is the tailnet identity of the Asahi boot, not macOS) | `100.105.210.109` |
+| mba13 | mba13-mac | `13m` | `mba13/` | macOS (1st partition — the other boot of the same physical machine as `mba13-linux`) | on the AM Tailscale network; **outbound-only** — "Disable incoming connections" is on in the Tailscale app, so it can SSH out to other hosts but nothing can SSH into it; see `mba13/todo_mba13-mac_onboard.md` |
+| mbp16 | mbp16-mac | `16m` | `mbp16/` | macOS | `100.87.74.44` (also has a separate Zenith-network IP, `100.108.204.52`, when logged into Zenith instead) |
 
 "Physical name" is how the machine is referred to day to day; "Tailnet
-hostname" is what shows up in `tailscale status` / DNS names like
-`geekom-linux.tail6e8877.ts.net`. IPs above are on the **AM** network — see below
-for why a machine can have a different IP on Zenith.
+hostname" is what shows up in `tailscale status`'s hostname column
+historically and is used throughout this repo/`chezmoi`'s `machine` data
+value (see `chezmoi/README.md`). "Tailscale short name" is the current,
+shorter device name set in the Tailscale admin console (renamed after the
+hostname migration this repo otherwise documents) — it's what
+`tailscale status` and MagicDNS names actually show today, e.g.
+`6l.seahorse-enigmatic.ts.net`. `seahorse-enigmatic.ts.net` is this
+tailnet's MagicDNS/cert domain (HTTPS Certificates enabled) — used for
+any `tailscale serve`/Caddy TLS work (see `services/`). IPs above are on
+the **AM** network — see below for why a machine can have a different IP
+on Zenith.
 
 ## Tailscale networks
 
