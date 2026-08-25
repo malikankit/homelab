@@ -677,6 +677,96 @@ durable enough on its own (only surfaces if `service_map.html` happens
 to get opened), so this makes it visible any time this repo is worked
 in. Commit: `eb6c0c4`.
 
+11. Forgejo install completed; debugged a crash loop from the install wizard's own self-restart
+
+Submitted Forgejo's install wizard; it got stuck loading. `docker logs`
+showed the install itself completing fine ("First-time run install
+finished!"), but Forgejo's own post-install self-restart then
+crash-looped on `bind: address already in use` for `:22` every ~60s.
+Traced it to the image's *own* real `sshd`, run permanently via `s6`
+(inspected the image directly with `docker run --entrypoint sh ...`) —
+`FORGEJO__server__START_SSH_SERVER=true` in the compose file (set when
+first written) made Forgejo's built-in Go SSH server also try to bind
+the same port. Fixed by setting it to explicit `false` (omitting it
+wasn't enough — `environment-to-ini` won't unset a value already baked
+into `app.ini` from a prior boot). Verified stable afterward. Commit:
+`aa2fde2`; full write-up in `services/forgejo/README.md`'s "Known
+gotcha" section.
+
+Caught the whole rest of the day's documentation up in the same pass:
+`geekom/early_journal.md` itself (this entry, retroactively for items
+5–10 above), `gitandansiblesetupplan.md`'s checklist, `services/caddy/
+README.md` (the `tailscale serve` CLI syntax change, and a Brave
+Secure-DNS gotcha diagnosed separately — see item 7), and
+`HOMELAB.md`'s changelog. Commit: `bff45cf`.
+
+12. A `High priority` section added to `TODO.md`
+
+Split out the concrete Forgejo/obsidian-git next steps plus the three
+existing open items with real availability/security stakes (LUKS
+remote-unlock, BIOS power-loss recovery, Tailscale/ufw bypass) above
+the undifferentiated `Open` list, so what actually matters next doesn't
+get lost in the longer-tail items. Commit: `b6c5a00`.
+
+13. tmux reverted back to one independent session per SSH connection
+
+The shared-`main`-session-plus-new-window design from item 1 (this same
+date) turned out broken once actually tested with two simultaneous SSH
+logins: tmux gives every client attached to the *same* session one
+shared "current window," so one connection switching windows dragged
+every other connection's view along with it — the exact collision that
+design was meant to avoid. Reverted `dot_zshrc.tmpl` back to the
+original per-connection `ssh-<pid>` session design (what item 1 had
+replaced). tmux session *groups* (`new-session -t main -s ssh-$$`)
+could give independent per-connection views while still sharing one
+window pool, if wanted later — noted as an option, not implemented.
+Commit: `60ad504` (bundled with two small TODO additions: a `scpme`
+alias mirroring `sshme`, and a rclone OneDrive download to review once
+finished — see items 14–15).
+
+14. rclone configured on geekom, reusing mbp16-mac's existing OneDrive auth
+
+Installed rclone via its official install script (`v1.75.0` — Ubuntu's
+own apt package was a stale `1.60.1`). Rather than re-running OneDrive's
+OAuth flow on geekom, copied mbp16-mac's already-authenticated
+`~/.config/rclone/rclone.conf` over directly (`scp`, using mbp16-mac's
+own outbound `sshg` alias — geekom can't pull from mbp16-mac, nothing
+is authorized in that direction), moved it into place on geekom with
+`700`/`600` permissions, and confirmed it authenticates
+(`rclone lsd OneDrive:` listed real folders with no re-auth prompt).
+Started a real download (`Arq Backup Data/<...>` →
+`~/onedrive_downloads/`) in the user's own separate tmux session, so it
+isn't tied to this one — tracked in `TODO.md` to review for completeness
+once finished.
+
+15. Two Obsidian vaults synced through Forgejo via `obsidian-git`
+
+Created `obs` (the actual vault, continuous manual edits) and `llmwiki`
+(a separate repo for an LLM-generated wiki — the plan doc's
+"Karpathy-style automated wiki pipeline", not yet built; kept separate
+per the plan doc's own stated rationale: different commit cadence/
+access pattern) as private, empty repos on Forgejo. Set up
+`obsidian-git` on both mba13-mac and mbp16-mac, each with its own
+dedicated SSH key (`<machine>_to_forgejo_ed25519` — same
+one-key-per-trust-boundary convention as every other inter-host key in
+this repo) and a `Host forgejo` alias in `~/.ssh/config`. Full runbook
+in the new `obsidian_sync_setup.md`. Cross-device sync-loop testing
+(edit on one device → auto-commit → push → pull on the other) not yet
+separately confirmed. Commit: `9fd59fd`.
+
+16. This `homelab` repo now mirrors to Forgejo too, on every push
+
+Same per-machine dedicated-key pattern applied to geekom itself
+(`geekom-linux_to_forgejo_ed25519`) plus a `homelab` repo created on
+Forgejo the same way as `obs`/`llmwiki`. Rather than a second named
+remote (which would need an explicit second `git push` command every
+time), added a **second push URL to `origin`** instead — `git fetch`/
+`pull` stay GitHub-only, but a plain `git push` now pushes to both
+GitHub and Forgejo in one command. Verified with a real push (GitHub:
+already up to date; Forgejo: received full history as a new `main`
+branch). Documented in `HOMELAB.md` alongside the rest of the SSH key
+inventory. Commit: `f65ceb9`.
+
 ## Before 2026-Aug-14
 
 
