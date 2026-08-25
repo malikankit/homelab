@@ -1,2 +1,10 @@
 # Not a managed dotfile — documentation for this folder itself.
 README.md
+
+{{- if ne .machine "geekom-linux" }}
+# authorized_keys differs per machine (each host authorizes different
+# peers) — only geekom's is tracked so far, see TODO.md. Applying it
+# unmodified to any other machine would silently overwrite whoever
+# that machine actually authorizes.
+.ssh/authorized_keys
+{{- end }}
