@@ -40,7 +40,8 @@ detect_machine() {
   fi
   [[ -z "$name" ]] && name="$(hostname -s 2>/dev/null || true)"
 
-  case "${name,,}" in
+  name="$(printf '%s' "$name" | tr '[:upper:]' '[:lower:]')"
+  case "$name" in
     *mba13*) echo "mba13-mac" ;;
     *mbp16*) echo "mbp16-mac" ;;
     *) echo "" ;;
