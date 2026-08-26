@@ -104,11 +104,15 @@ alias sshme="ssh -i ~/.ssh/mba13-linux_to_tailnet_ed25519"
 {{- else if eq $machine "mba13-mac" }}
 alias hlm="cd ~/code/homelab/mba13/"
 alias sshg="ssh -i ~/.ssh/mba13-mac_to_tailnet am@100.78.110.5"       # geekom-linux
+alias shix="sshg"                                                     # muscle-memory alias, same as sshg
 alias sshl="ssh -i ~/.ssh/mba13-mac_to_tailnet am@100.105.210.109"    # mba13-linux (other boot, same hardware)
 alias sshme="ssh -i ~/.ssh/mba13-mac_to_tailnet"
+alias sshdockge="ssh -N -L 5001:localhost:5001 -i ~/.ssh/mba13-mac_to_tailnet am@100.78.110.5"  # forward geekom's Dockge UI to localhost:5001
 {{- else if eq $machine "mbp16-mac" }}
 alias hlp="cd ~/code/homelab/mbp16/"
 alias sshg="ssh -i ~/.ssh/id_rsa am@100.78.110.5"       # geekom-linux
+alias shix="sshg"                                       # muscle-memory alias, same as sshg
 alias sshm="ssh -i ~/.ssh/id_rsa am@100.105.210.109"    # mba13-linux
 alias sshme="ssh -i ~/.ssh/id_rsa"
+alias sshdockge="ssh -N -L 5001:localhost:5001 -i ~/.ssh/id_rsa am@100.78.110.5"  # forward geekom's Dockge UI to localhost:5001
 {{- end }}
