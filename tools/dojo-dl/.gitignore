@@ -1,0 +1,4 @@
+.venv/
+session.json
+downloads/
+__pycache__/
