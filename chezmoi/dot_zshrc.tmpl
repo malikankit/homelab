@@ -17,13 +17,26 @@
 # "current window," so one connection switching windows dragged every
 # other connection's view along with it. Independent sessions avoid
 # that entirely, at the cost of not sharing a window list across
-# connections. `-A` still means a dropped-and-reconnected *same*
-# session (e.g. `ssh` from a script that reuses a control-master
-# connection) reattaches instead of erroring. To rejoin a specific
+# connections.
+#
+# Unbounded per-connection sessions turned into "tmux session hell"
+# (19 accumulated over a few days of SSH logins) — so this is capped:
+# once 3 or more sessions already exist, new logins join "main" instead
+# of spawning yet another one. Below that threshold, still get their
+# own independent session as above. `-A` means a dropped-and-reconnected
+# *same* session (e.g. `ssh` from a script reusing a control-master
+# connection) reattaches instead of erroring — same effect for "main"
+# once at the cap, so repeatedly reconnecting while at/over the
+# threshold doesn't pile up empty sessions either. To rejoin a specific
 # session from elsewhere, or from a fresh SSH window on purpose:
 # `tmux attach -t ssh-<pid>` (see `tmux ls`).
 if [[ -n "$SSH_CONNECTION" ]] && [[ -z "$TMUX" ]]; then
-  exec tmux new-session -A -s "ssh-$$"
+  session_count=$(tmux ls 2>/dev/null | wc -l | tr -d ' ')
+  if [[ "$session_count" -ge 3 ]]; then
+    exec tmux new-session -A -s main
+  else
+    exec tmux new-session -A -s "ssh-$$"
+  fi
 fi
 
 # ═══════════════════════════════════════════════════════
