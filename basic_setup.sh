@@ -154,41 +154,35 @@ section_vim_plugins() {
 }
 
 section_sshfs() {
-  # macFUSE ships as a signed system extension, but macOS still requires
-  # one-time manual approval before it actually loads — can't be
-  # scripted around, so this is called out explicitly rather than
-  # silently failing later on `mountg`. Two steps, in order:
-  #  1. Apple Silicon only: Recovery Mode -> Startup Security Utility ->
-  #     Security Policy -> "Reduced Security" -> check "Allow user
-  #     management of kernel extensions from identified developers" ->
-  #     restart. Without this, macOS won't even offer the Allow button
-  #     in step 2 — it just silently blocks the extension. (Shut down
-  #     fully, then hold the power button until "Loading startup
-  #     options" appears, to reach Recovery.)
-  #  2. System Settings -> Privacy & Security -> scroll to the security
-  #     prompt -> Allow (from "Benjamin Fleischer") -> restart again.
-  if brew list --cask macfuse >/dev/null 2>&1; then
-    echo "macFUSE already installed — skipping."
+  # FUSE-T instead of macFUSE — deliberately, not the "default" choice.
+  # macFUSE needs a kernel extension, which on Apple Silicon requires
+  # Reduced Security enabled via Recovery Mode's Startup Security
+  # Utility before macOS will even offer the approval prompt — and on a
+  # machine that dual-boots Asahi Linux, getting Recovery Mode to edit
+  # *macOS's* policy specifically (each boot volume group has its own
+  # independent policy) turned out not to work in practice. FUSE-T
+  # implements the same FUSE interface via a macOS Network Extension
+  # instead of a kernel extension — just a plain System Settings
+  # approval, no Recovery Mode, no kext hassle, no interaction with
+  # whatever else is dual-booted on the machine.
+  if brew list --cask fuse-t >/dev/null 2>&1; then
+    echo "FUSE-T already installed — skipping."
   else
-    brew install --cask macfuse
+    brew install --cask macos-fuse-t/homebrew-cask/fuse-t
     echo
-    echo "macFUSE needs one-time manual approval before it'll load:"
-    echo "1. Apple Silicon only: Recovery Mode -> Startup Security Utility"
-    echo "   -> Security Policy -> Reduced Security -> check \"Allow user"
-    echo "   management of kernel extensions from identified developers\""
-    echo "   -> restart. (Shut down fully, hold power button for options.)"
-    echo "2. System Settings -> Privacy & Security -> Allow (Benjamin"
-    echo "   Fleischer) -> restart again."
-    echo "mountg (below) won't work until both steps are done."
+    echo "FUSE-T needs one-time approval: System Settings -> Privacy &"
+    echo "Security -> Allow the network extension prompt, if one appears."
+    echo "No Recovery Mode step needed. mountg (below) won't work until"
+    echo "this is approved."
     echo
   fi
 
-  # sshfs itself was pulled from homebrew-core (licensing) — this
-  # community tap tracks it for current macFUSE versions.
+  # FUSE-T's own sshfs build (not gromgit/fuse/sshfs-mac, which is
+  # built against macFUSE specifically).
   if command -v sshfs >/dev/null 2>&1; then
     echo "sshfs already installed — skipping."
   else
-    brew install gromgit/fuse/sshfs-mac
+    brew install macos-fuse-t/homebrew-cask/fuse-t-sshfs
   fi
 }
 
@@ -215,7 +209,7 @@ run_section "vim-plug + Markdown-preview plugins" \
   section_vim_plugins
 
 run_section "sshfs (mount geekom's ~/code as ~/6l/code)" \
-  "Installs macFUSE + sshfs via Homebrew, for the mountg/umountg aliases in .zshrc. macFUSE needs a one-time manual approval + reboot before it actually works (instructions printed if this is a fresh install)." \
+  "Installs FUSE-T + sshfs via Homebrew, for the mountg/umountg aliases in .zshrc. FUSE-T needs a one-time System Settings approval (no Recovery Mode/kext hassle) before it actually works (instructions printed if this is a fresh install)." \
   section_sshfs
 
 echo "Done."
