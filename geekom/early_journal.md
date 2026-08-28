@@ -767,6 +767,89 @@ already up to date; Forgejo: received full history as a new `main`
 branch). Documented in `HOMELAB.md` alongside the rest of the SSH key
 inventory. Commit: `f65ceb9`.
 
+## 2026-Aug-26
+
+1. Small alias/skill additions
+
+Added `shix` (a muscle-memory duplicate of `sshg`, same target) and
+`sshdockge` (`ssh -N -L 5001:localhost:5001 ...` — forwards geekom's
+Dockge UI to `localhost:5001` in one command, instead of typing the
+full tunnel out by hand each time) to both Macs' alias blocks. Fixed a
+portability bug in `basic_setup.sh`: `${name,,}` (lowercase expansion)
+needs bash 4+, but macOS ships bash 3.2 by default — swapped in a
+`tr`-based lowercase instead. Also firmed up the LiveSync+CouchDB idea
+into a real `TODO.md` entry (later re-confirmed/kept as one clean entry
+when revisited on 2026-Aug-28 below). Added a `quick-commit` skill
+(`.claude/skills/quick-commit/SKILL.md`) for fast commit+push in this
+repo without the full review ceremony, given how low-stakes/personal
+it is. Commits: `2dccb96`, `dd05828`, `b9369d4`.
+
+## 2026-Aug-28
+
+1. sshfs mount of geekom's `~/code` on both Macs
+
+Added a `mountg`/`umountg` alias pair to both `mba13-mac` and
+`mbp16-mac` blocks — `mountg` mounts geekom's `~/code` at `~/6l/code`
+via `sshfs`, using each machine's own dedicated key, with
+`reconnect`/keepalive options for laptop sleep and network changes.
+`basic_setup.sh` got a new `sshfs` section (macFUSE + `sshfs-mac` via
+Homebrew, idempotent) — macFUSE needs a one-time manual approval in
+System Settings plus a reboot before it actually works, which the
+section calls out explicitly rather than letting `mountg` fail silently
+later. Commit: `1712f28`.
+
+2. Found and fixed a live misconfiguration: geekom identifying as `mba13-mac`
+
+While reviewing the mount-alias diff, noticed geekom's own
+`~/.config/chezmoi/chezmoi.toml` had `machine = "mba13-mac"` instead of
+`"geekom-linux"` — meaning geekom's live `.zshrc` had been rendering
+mba13-mac's aliases (missing `sham`, `sshme`/`sshg`/`sshl` all pointing
+at a key that doesn't exist on geekom) instead of its own. Cause:
+`basic_setup.sh` was accidentally run on geekom itself at some point,
+and its "which machine is this?" prompt got answered with the wrong
+name. Not a security issue (the misdirected aliases would just fail
+with "no such file"), but a real functional bug — fixed by correcting
+`chezmoi.toml` and re-applying; confirmed `sham`/`sshme` restored
+correctly. `chezmoi.toml` is local/untracked, so no commit for the fix
+itself, but worth recording here since it explains a few days of a
+broken `sham` alias on geekom.
+
+3. Stopped publishing the service map as a Claude Artifact
+
+Noticed the earlier `geekom/service_map.html` Artifact publish had
+started a live watch/subscription in the session (background
+notifications on republish/comments) — explicitly didn't want that.
+Unwatched it, and updated both `geekom/service_map.html`'s own header
+comment and `CLAUDE.md` to say local-only going forward: view by
+opening the file directly, don't publish diagrams/docs from this repo
+as Artifacts unless asked. Saved as a standing memory too, not just an
+in-repo note. Commit: `1712f28` (bundled with the mount-alias work
+above).
+
+4. tmux session hell: cleaned up 19 accumulated sessions, capped future growth
+
+The per-connection-session design (`ssh-<pid>`, one independent tmux
+session per SSH login) had no upper bound — a few days of logins left
+19 sessions running on geekom. Cleaned up: kept `main`, `rclone`, and 4
+sessions with a live `claude` process actively running in them (real
+work in progress, not safe to kill), killed the 12 sessions sitting
+idle at a bare `zsh` prompt. Fixed the underlying design: once 3+
+sessions already exist, a new SSH login now joins `main` instead of
+spawning another — below that threshold, still gets its own
+independent session as before. Commit: `8eeaf28`.
+
+5. `tmux.conf` added to chezmoi, `detach-on-destroy off`
+
+First `tmux.conf` tracked in this repo (`chezmoi/dot_tmux.conf`). Sets
+`detach-on-destroy off`, so a client attached to a session that gets
+killed (or whose last window closes) lands on another existing session
+instead of being kicked out to the outer shell — relevant given the
+session-cap logic above, so a client doesn't get unceremoniously
+dropped if its session is ever cleaned up while still attached.
+Applied via `chezmoi apply` and reloaded live with
+`tmux source-file ~/.tmux.conf`; confirmed with `tmux show-options -g
+detach-on-destroy`.
+
 ## Before 2026-Aug-14
 
 
