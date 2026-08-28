@@ -221,3 +221,15 @@ else
   echo "zsh is already your login shell."
 fi
 echo "If Powerlevel10k icons look wrong, run 'p10k configure' (needs a Nerd Font in your terminal app)."
+
+# Hand off to a fresh zsh so whatever chezmoi/section_chezmoi just wrote
+# to .zshrc (new aliases, etc.) is live immediately in this same
+# terminal — this script's own process can't change *your* shell's
+# already-loaded environment otherwise, only a new one starting fresh
+# picks it up. Exiting this new shell (Ctrl+D / `exit`) drops you back
+# into whatever shell you originally ran this script from.
+if command -v zsh >/dev/null 2>&1; then
+  echo
+  echo "Starting a fresh zsh so new aliases are live in this terminal..."
+  exec zsh
+fi
