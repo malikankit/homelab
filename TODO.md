@@ -2,13 +2,13 @@
 
 ## High priority
 
-- [ ] **Review the OneDrive → geekom rclone download for completeness.**
-  Copied `rclone.conf` from mbp16-mac (its `OneDrive` remote,
-  already-authenticated) to geekom's `~/.config/rclone/rclone.conf`, in
-  progress: `rclone copy "OneDrive:Arq Backup Data/93F1AF98-1DA2-4FC6-8AA1-F32F1515AAA9"
-  ~/onedrive_downloads/93F1AF98-1DA2-4FC6-8AA1-F32F1515AAA9 --progress`,
-  running in the user's own tmux session. Check it actually completed
-  (file count/size sanity check against OneDrive) once done.
+- [x] **Review the OneDrive → geekom rclone download for completeness.**
+  Done — completed successfully: 373.446 GiB / 373.446 GiB (100%),
+  353,622 / 353,622 files transferred per the run's own log
+  (`geekom/logs/rclone-download-onedrive.log`), confirmed against disk
+  (`du -sh` → 375G, `find | wc -l` → 353622 files — matches). A few
+  transient errors mid-run (malformed drive id, one chunk timeout, one
+  JWT parse error) self-resolved on retry.
 - [x] **Create the Obsidian vault repo + a wiki repo on Forgejo.**
   Done — `obs` (vault) and `llmwiki` (LLM-generated wiki, pipeline
   TBD), both private, both empty. See `obsidian_sync_setup.md`.
