@@ -5,6 +5,6 @@
   (tailscale serve, Caddy, direct ports). Whenever a service is added,
   removed, or its exposure changes (new port, new proxy hop, etc.),
   update this diagram in the same batch of work — don't treat it as a
-  one-time snapshot. It's also published as a Claude Artifact; if
-  regenerated there, copy the resulting HTML back over this file so the
-  repo copy doesn't drift from what's actually being shown.
+  one-time snapshot. **Keep this local-only — do not publish it (or any
+  other diagram/doc from this repo) as a Claude Artifact.** View it by
+  opening the file directly.

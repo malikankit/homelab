@@ -153,6 +153,32 @@ section_vim_plugins() {
   vim -es -u "$HOME/.vimrc" -c "PlugInstall --sync" -c "qa"
 }
 
+section_sshfs() {
+  # macFUSE ships as a signed system extension, but macOS still requires
+  # a one-time manual approval (System Settings -> Privacy & Security ->
+  # allow the "benjamin fleischer" extension) plus a reboot before it
+  # actually loads — can't be scripted around, so this is called out
+  # explicitly rather than silently failing later on `mountg`.
+  if brew list --cask macfuse >/dev/null 2>&1; then
+    echo "macFUSE already installed — skipping."
+  else
+    brew install --cask macfuse
+    echo
+    echo "macFUSE needs one-time manual approval: System Settings ->"
+    echo "Privacy & Security -> scroll to the security prompt -> Allow,"
+    echo "then reboot. mountg (below) won't work until you've done this."
+    echo
+  fi
+
+  # sshfs itself was pulled from homebrew-core (licensing) — this
+  # community tap tracks it for current macFUSE versions.
+  if command -v sshfs >/dev/null 2>&1; then
+    echo "sshfs already installed — skipping."
+  else
+    brew install gromgit/fuse/sshfs-mac
+  fi
+}
+
 # ── Run ───────────────────────────────────────────────────────────────
 
 run_section "Oh My Zsh" \
@@ -174,6 +200,10 @@ run_section "chezmoi (.zshrc / .p10k.zsh / .gitconfig / .vimrc)" \
 run_section "vim-plug + Markdown-preview plugins" \
   "Installs vim-plug and runs :PlugInstall for the plugins .vimrc declares (previm, open-browser.vim)." \
   section_vim_plugins
+
+run_section "sshfs (mount geekom's ~/code as ~/6l/code)" \
+  "Installs macFUSE + sshfs via Homebrew, for the mountg/umountg aliases in .zshrc. macFUSE needs a one-time manual approval + reboot before it actually works (instructions printed if this is a fresh install)." \
+  section_sshfs
 
 echo "Done."
 if [[ "$SHELL" != *zsh* ]]; then
