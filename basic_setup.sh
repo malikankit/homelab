@@ -172,8 +172,9 @@ section_sshfs() {
     echo
     echo "FUSE-T needs one-time approval: System Settings -> Privacy &"
     echo "Security -> Allow the network extension prompt, if one appears."
-    echo "No Recovery Mode step needed. mountg (below) won't work until"
-    echo "this is approved."
+    echo "The first actual mountg run also triggers a macOS \"local"
+    echo "network\" permission prompt (for the sshfs process itself) --"
+    echo "approve that too. No Recovery Mode step needed either way."
     echo
   fi
 

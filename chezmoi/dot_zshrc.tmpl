@@ -121,7 +121,7 @@ alias shix="sshg"                                                     # muscle-m
 alias sshl="ssh -i ~/.ssh/mba13-mac_to_tailnet am@100.105.210.109"    # mba13-linux (other boot, same hardware)
 alias sshme="ssh -i ~/.ssh/mba13-mac_to_tailnet"
 alias sshdockge="ssh -N -L 5001:localhost:5001 -i ~/.ssh/mba13-mac_to_tailnet am@100.78.110.5"  # forward geekom's Dockge UI to localhost:5001
-alias mountg="mkdir -p ~/6l/code && sshfs -o IdentityFile=~/.ssh/mba13-mac_to_tailnet,reconnect,follow_symlinks,volname=6l-code,ssh_command=\"ssh -o ServerAliveInterval=15 -o ServerAliveCountInterval=3\" am@100.78.110.5:/home/am/code ~/6l/code"
+alias mountg="mkdir -p ~/6l/code && sshfs -o IdentityFile=~/.ssh/mba13-mac_to_tailnet,reconnect,follow_symlinks,volname=6l-code am@100.78.110.5:/home/am/code ~/6l/code"
 alias umountg="umount ~/6l/code"   # if that errors "resource busy": diskutil unmount force ~/6l/code
 {{- else if eq $machine "mbp16-mac" }}
 alias hlp="cd ~/code/homelab/mbp16/"
@@ -130,6 +130,6 @@ alias shix="sshg"                                       # muscle-memory alias, s
 alias sshm="ssh -i ~/.ssh/id_rsa am@100.105.210.109"    # mba13-linux
 alias sshme="ssh -i ~/.ssh/id_rsa"
 alias sshdockge="ssh -N -L 5001:localhost:5001 -i ~/.ssh/id_rsa am@100.78.110.5"  # forward geekom's Dockge UI to localhost:5001
-alias mountg="mkdir -p ~/6l/code && sshfs -o IdentityFile=~/.ssh/id_rsa,reconnect,follow_symlinks,volname=6l-code,ssh_command=\"ssh -o ServerAliveInterval=15 -o ServerAliveCountInterval=3\" am@100.78.110.5:/home/am/code ~/6l/code"
+alias mountg="mkdir -p ~/6l/code && sshfs -o IdentityFile=~/.ssh/id_rsa,reconnect,follow_symlinks,volname=6l-code am@100.78.110.5:/home/am/code ~/6l/code"
 alias umountg="umount ~/6l/code"   # if that errors "resource busy": diskutil unmount force ~/6l/code
 {{- end }}
