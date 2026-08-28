@@ -155,18 +155,31 @@ section_vim_plugins() {
 
 section_sshfs() {
   # macFUSE ships as a signed system extension, but macOS still requires
-  # a one-time manual approval (System Settings -> Privacy & Security ->
-  # allow the "benjamin fleischer" extension) plus a reboot before it
-  # actually loads — can't be scripted around, so this is called out
-  # explicitly rather than silently failing later on `mountg`.
+  # one-time manual approval before it actually loads — can't be
+  # scripted around, so this is called out explicitly rather than
+  # silently failing later on `mountg`. Two steps, in order:
+  #  1. Apple Silicon only: Recovery Mode -> Startup Security Utility ->
+  #     Security Policy -> "Reduced Security" -> check "Allow user
+  #     management of kernel extensions from identified developers" ->
+  #     restart. Without this, macOS won't even offer the Allow button
+  #     in step 2 — it just silently blocks the extension. (Shut down
+  #     fully, then hold the power button until "Loading startup
+  #     options" appears, to reach Recovery.)
+  #  2. System Settings -> Privacy & Security -> scroll to the security
+  #     prompt -> Allow (from "Benjamin Fleischer") -> restart again.
   if brew list --cask macfuse >/dev/null 2>&1; then
     echo "macFUSE already installed — skipping."
   else
     brew install --cask macfuse
     echo
-    echo "macFUSE needs one-time manual approval: System Settings ->"
-    echo "Privacy & Security -> scroll to the security prompt -> Allow,"
-    echo "then reboot. mountg (below) won't work until you've done this."
+    echo "macFUSE needs one-time manual approval before it'll load:"
+    echo "1. Apple Silicon only: Recovery Mode -> Startup Security Utility"
+    echo "   -> Security Policy -> Reduced Security -> check \"Allow user"
+    echo "   management of kernel extensions from identified developers\""
+    echo "   -> restart. (Shut down fully, hold power button for options.)"
+    echo "2. System Settings -> Privacy & Security -> Allow (Benjamin"
+    echo "   Fleischer) -> restart again."
+    echo "mountg (below) won't work until both steps are done."
     echo
   fi
 
