@@ -16,8 +16,15 @@
   per-user SSH key auth over `100.78.110.5:2222`. Done on both
   mba13-mac and mbp16-mac, each with its own dedicated key. See
   `obsidian_sync_setup.md` for the full runbook.
-- [ ] **Test the sync loop end-to-end**: edit a note → auto-commit →
-  push → pull on a second device. Not yet separately confirmed.
+- [x] **Test the sync loop end-to-end**: edit a note → auto-commit →
+  push → pull on a second device. Confirmed working.
+- [x] **Push this `homelab` repo to Forgejo too**, not just GitHub.
+  Done — `origin` has a second push URL (Forgejo, via a dedicated
+  `geekom-linux_to_forgejo_ed25519` key), so a plain `git push` mirrors
+  to both automatically. See `HOMELAB.md`.
+
+## Low priority
+
 - [ ] **Set up LiveSync + CouchDB for Obsidian, alongside `obsidian-git`.**
   Per `gitandansiblesetupplan.md`'s Phase 2 options table: `obsidian-git`
   gives full Git history but only scheduled (not real-time) sync, with
@@ -30,25 +37,35 @@
   others), exposed only over Tailscale (same pattern as Forgejo — no
   raw port on a real interface), and the LiveSync community plugin
   configured on each device.
-- [x] **Push this `homelab` repo to Forgejo too**, not just GitHub.
-  Done — `origin` has a second push URL (Forgejo, via a dedicated
-  `geekom-linux_to_forgejo_ed25519` key), so a plain `git push` mirrors
-  to both automatically. See `HOMELAB.md`.
-- [ ] **geekom: decide on LUKS remote-unlock strategy.** Root disk is
-  LUKS-encrypted — geekom has no network stack after any reboot until
-  someone physically types the passphrase, which already caused an
-  extended outage once (see the 2026-Aug-23 power-loss incident in
-  `geekom/early_journal.md`). See "Open" below for detail.
-- [ ] **geekom: check BIOS "restore power after AC loss" setting.**
-  Same incident — confirm geekom actually auto-boots after a real power
-  outage. See "Open" below for detail.
-- [ ] **Decide how to fix the Tailscale/ufw bypass.** Real reachability
-  today is governed by Tailscale ACLs + sshd auth, not the per-machine
-  ufw allowlists this repo otherwise documents as the security
-  boundary — a live gap between documented and actual posture. See
-  "Open" below for detail.
 
-## Open
+- [ ] **geekom: decide on LUKS remote-unlock strategy.** Root disk is
+  LUKS-encrypted — on any reboot (crash, power blip, update), geekom has
+  no network stack until someone physically types the passphrase, which
+  defeats "always reachable via Tailscale" and already caused an
+  extended outage once (see the 2026-Aug-23 power-loss incident in
+  `geekom/early_journal.md`). Options laid out in
+  `geekom/always_on_setup.md` (Layer 3): TPM2 auto-unlock (convenient,
+  trades away at-rest protection against physical theft-while-off),
+  `dropbear-initramfs` (needs a LAN-local relay device to be useful from
+  outside the LAN — more infra), or accept the risk as-is. Needs a
+  deliberate decision, not a default.
+
+- [ ] **geekom: check BIOS "restore power after AC loss" setting.**
+  Firmware-level, can't be checked/changed from software — confirm
+  geekom auto-boots after a real power outage rather than staying off
+  until a physical button press. See `geekom/always_on_setup.md`.
+
+- [ ] **Decide how to fix the Tailscale/ufw bypass.** `tailscaled`
+  inserts its own `ts-input` chain ahead of ufw's, so ufw's per-machine
+  IP allowlist never runs for traffic arriving over Tailscale —
+  confirmed empirically (SSH from mba13-mac succeeded despite its IP
+  not being in geekom's allowlist). Real reachability today is
+  Tailscale ACL policy (default allow-all) + sshd key-only auth, not
+  ufw — a live gap between documented and actual posture. Two fix
+  directions, not yet chosen: write actual restrictive Tailscale ACLs
+  in the admin console, or disable Tailscale's netfilter management
+  (`--netfilter-mode=off`) so ufw can see/filter `tailscale0` traffic
+  again. See `knowledge/tailscale_ufw_bypass.md`.
 
 - [ ] **Add a `scpme` alias, same idea as `sshme`.** Per-machine,
   host-less — `scp -i <that machine's own tailnet identity key>` — so
@@ -86,17 +103,6 @@
   terminals normally reserve Cmd for their own menu shortcuts. Needs
   the user's Karabiner config / terminal key-passthrough settings
   before this can be implemented correctly.
-
-- [ ] **Decide how to fix the Tailscale/ufw bypass.** `tailscaled`
-  inserts its own `ts-input` chain ahead of ufw's, so ufw's per-machine
-  IP allowlist never runs for traffic arriving over Tailscale —
-  confirmed empirically (SSH from mba13-mac succeeded despite its IP
-  not being in geekom's allowlist). Real reachability today is
-  Tailscale ACL policy (default allow-all) + sshd key-only auth, not
-  ufw. Two fix directions, not yet chosen: write actual restrictive
-  Tailscale ACLs in the admin console, or disable Tailscale's netfilter
-  management (`--netfilter-mode=off`) so ufw can see/filter
-  `tailscale0` traffic again. See `knowledge/tailscale_ufw_bypass.md`.
 
 - [ ] **Re-run `ufw_rules.sh` on geekom-linux and mba13-linux after the
   hostname rename (2026-08-22).** The scripts' comments/variable names
@@ -156,21 +162,6 @@
   Done — `geekom/disable_sleep.sh` masks the systemd sleep targets, sets
   an explicit `logind.conf` override, and locks the GNOME dconf settings.
   See `geekom/always_on_setup.md`.
-
-- [ ] **geekom: decide on LUKS remote-unlock strategy.** Root disk is
-  LUKS-encrypted — on any reboot (crash, power blip, update), geekom has
-  no network stack until someone physically types the passphrase, which
-  defeats "always reachable via Tailscale." Options laid out in
-  `geekom/always_on_setup.md` (Layer 3): TPM2 auto-unlock (convenient,
-  trades away at-rest protection against physical theft-while-off),
-  `dropbear-initramfs` (needs a LAN-local relay device to be useful from
-  outside the LAN — more infra), or accept the risk as-is. Needs a
-  deliberate decision, not a default.
-
-- [ ] **geekom: check BIOS "restore power after AC loss" setting.**
-  Firmware-level, can't be checked/changed from software — confirm
-  geekom auto-boots after a real power outage rather than staying off
-  until a physical button press. See `geekom/always_on_setup.md`.
 
 - [x] **Migrate Claude Code sessions and projects from mba13-linux to geekom.**
   Done via `mba13/migrate_project.sh` for 8 projects (ailearning2026,
