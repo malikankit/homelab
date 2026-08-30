@@ -47,26 +47,18 @@ trimmed to reflect that; see `../TODO.md` for the current status.
    files. — **done**: `mba13/mba13-mac_to_tailnet.pub`, authorized on
    geekom-linux.
 
-3. **Confirm inbound is actually blocked.** Since mba13-mac doesn't
-   need to accept SSH, verify the negative instead of hardening for the
-   positive: from another AM-tailnet peer, confirm
-   `ssh <user>@<mba13-mac-ip>` and `nc -zv -w3 <mba13-mac-ip> 22` both
-   fail/time out. (Belt-and-suspenders: Remote Login should also stay
-   **off** in System Settings → General → Sharing — no sshd listening
-   at all is stronger than sshd-listening-but-blocked-by-Tailscale.)
+3. **Confirm inbound is actually blocked.** — **done**: `ssh`/`nc`
+   attempts from a peer both fail.
 
-4. **Confirm Tailscale SSH is off.** `tailscale debug prefs` should show
-   `"RunSSH": false` — same rationale as the other machines
-   (`geekom/tailscale_setup.md` "Why not Tailscale SSH?"). Belt-and-
-   suspenders alongside the "Disable incoming connections" toggle, not
-   a substitute for it.
+4. **Confirm Tailscale SSH is off.** — **done**: `tailscale debug prefs`
+   shows `"RunSSH": false`.
 
-5. **Update `../HOMELAB.md`.** Fill in `mba13-mac`'s real IP in the
-   Machines table (replacing the "not yet onboarded" placeholder), note
-   it's outbound-only/inbound-blocked-via-Tailscale in the per-machine
-   hardening status table, and add an outbound-only row to the SSH
-   access map — same shape as the other three machines, adjusted for
-   the outbound-only model.
+5. **Update `../HOMELAB.md`.** — **done**: real IP (`100.71.170.17`)
+   filled into the Machines table, hardening status table updated to
+   "confirmed off" for both remaining columns.
 
-6. **Remove this file's TODO entry** from `../TODO.md` once done, and
-   fold a short summary into `../HOMELAB.md`'s changelog.
+6. **Remove this file's TODO entry** — **done**, `../TODO.md` now shows
+   this onboarding as complete; see `../HOMELAB.md`'s changelog for the
+   summary.
+
+**Onboarding complete as of 2026-08-30.**

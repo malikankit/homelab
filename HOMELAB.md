@@ -11,7 +11,7 @@ trust model, and SSH access map. Open follow-ups live in `TODO.md`.
 |---|---|---|---|---|---|
 | geekom | geekom-linux | `6l` | `geekom/` | Ubuntu 26.04 (desktop) | `100.78.110.5` |
 | mba13 | mba13-linux | `13l` | `mba13/` | Asahi Linux (2nd partition — mba13 dual-boots macOS + Asahi; `mba13-linux` is the tailnet identity of the Asahi boot, not macOS) | `100.105.210.109` |
-| mba13 | mba13-mac | `13m` | `mba13/` | macOS (1st partition — the other boot of the same physical machine as `mba13-linux`) | on the AM Tailscale network; **outbound-only** — "Disable incoming connections" is on in the Tailscale app, so it can SSH out to other hosts but nothing can SSH into it; see `mba13/todo_mba13-mac_onboard.md` |
+| mba13 | mba13-mac | `13m` | `mba13/` | macOS (1st partition — the other boot of the same physical machine as `mba13-linux`) | `100.71.170.17` — **outbound-only**, "Disable incoming connections" is on in the Tailscale app, so it can SSH out to other hosts but nothing can SSH into it |
 | mbp16 | mbp16-mac | `16m` | `mbp16/` | macOS | `100.87.74.44` (also has a separate Zenith-network IP, `100.108.204.52`, when logged into Zenith instead) |
 
 "Physical name" is how the machine is referred to day to day; "Tailnet
@@ -148,7 +148,7 @@ into a machine outside their intended boundary.
 | geekom-linux (geekom) | done | done (allowlist: mba13-linux, mbp16-mac) | done | confirmed off |
 | mba13-linux (mba13) | yes (working) | yes, but geekom-linux not yet added to allowlist | TBD — review pending | TBD — review pending |
 | mbp16-mac (mbp16) | TBD | TBD | TBD | TBD |
-| mba13-mac (mba13) | n/a — outbound-only, no inbound sshd needed | n/a — Tailscale's "Disable incoming connections" blocks all inbound at the Tailscale layer instead | n/a | TBD — belt-and-suspenders check pending, see `mba13/todo_mba13-mac_onboard.md` |
+| mba13-mac (mba13) | n/a — outbound-only, no inbound sshd needed | n/a — Tailscale's "Disable incoming connections" blocks all inbound at the Tailscale layer instead | n/a | confirmed off — inbound SSH/`nc` attempts from a peer fail, and `tailscale debug prefs` shows `"RunSSH": false` |
 
 `geekom/tailscale_setup.md`, `geekom/ufw_rules.sh`,
 `geekom/sshd_hardening.sh`, `geekom/test_ssh_setup.sh` are the reusable
@@ -157,6 +157,13 @@ tooling applies directly — only `mbp16` and `mba13-mac` (macOS) need
 different tooling (Application Firewall / `pf` instead of `ufw`).
 
 ## Changelog
+
+- **2026-08-30 — mba13-mac onboarding complete.** Real AM-tailnet IP
+  (`100.71.170.17`) filled into the Machines table; confirmed inbound
+  SSH is actually blocked (peer `ssh`/`nc` attempts fail) and Tailscale
+  SSH is off (`tailscale debug prefs` → `"RunSSH": false`) — both now
+  "confirmed off" in the hardening status table rather than TBD. See
+  `mba13/todo_mba13-mac_onboard.md`.
 
 - **2026-08-25 — Forgejo, Caddy, and Dockge all live on geekom.**
   `https://6l.seahorse-enigmatic.ts.net/` now resolves to Forgejo,
