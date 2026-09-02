@@ -850,6 +850,185 @@ Applied via `chezmoi apply` and reloaded live with
 `tmux source-file ~/.tmux.conf`; confirmed with `tmux show-options -g
 detach-on-destroy`.
 
+## 2026-Aug-28 (continued)
+
+6. `dojo-dl` tool added; OneDrive rclone download completed
+
+Added `tools/dojo-dl/`: downloads the Vimeo video embedded in a
+dojo-trading.com weekly market-update article using a real logged-in
+session (Playwright `login.py` saves `session.json`, gitignored;
+`download.py` replays it headlessly and shells out to `yt-dlp`) — first
+step toward a transcription pipeline. Commit: `4de0bad`.
+
+The OneDrive `rclone` download started on 2026-Aug-26 (item 14 above)
+finished: 373.446 GiB / 373.446 GiB (100%), ~1d13h runtime, a few
+transient errors (malformed drive id, chunk timeout, one JWT parse
+error) that self-resolved on retry. Verified against disk (353,622
+files, 375G matching the log) and marked complete in `TODO.md`.
+Commits: `4de0bad` (log file), `019936d` (TODO.md).
+
+7. sshfs/mountg troubleshooting, then switched macFUSE → FUSE-T
+
+Live-tested `mountg` on an Apple Silicon Mac and hit three real
+problems in sequence, each fixed:
+
+- sshfs only forwards a known subset of `-o` keys to the underlying
+  `ssh` process — `ServerAliveInterval`/`ServerAliveCountInterval`
+  aren't on that list, so they leaked through to the FUSE mount helper
+  and got rejected (`fuse: unknown option(s)`). Fixed by wrapping them
+  in `ssh_command="ssh -o ServerAliveInterval=15 -o
+  ServerAliveCountInterval=3"` instead. Commit: `67db5d5`.
+- macFUSE's System Settings "Allow" step doesn't even appear on Apple
+  Silicon until Reduced Security is enabled via Recovery Mode's Startup
+  Security Utility first — documented this gap in `basic_setup.sh`'s
+  comments. Commit: `4ba2275`.
+- Editing *macOS's* specific boot-volume-group policy through Recovery
+  didn't work out in practice on a machine dual-booting Asahi Linux, so
+  switched `basic_setup.sh`'s sshfs section from macFUSE to **FUSE-T**
+  entirely — implements FUSE via a Network Extension instead of a
+  kernel extension, so it only needs a plain System Settings approval,
+  no Recovery Mode. Commit: `c8d704f`.
+- Verified live on mba13-mac afterward: bare sshfs (IdentityFile only,
+  no `ssh_command`) mounts fine after a one-time local-network
+  permission prompt; the `ssh_command` workaround from the first fix
+  above actually broke FUSE-T's sshfs — SSH auth succeeded but no
+  `sftp-server` subprocess ever spawned (confirmed from geekom's own
+  sshd logs). Dropped the keepalive-tuning wrapper, kept `reconnect`;
+  documented the local-network permission prompt too. Commit: `9b10587`.
+
+8. `basic_setup.sh` hands off to a fresh `zsh` at the end
+
+`mountg` appeared "missing" mid-session simply because the shell
+testing it hadn't reloaded after `basic_setup.sh` ran — the script's own
+process can't change the invoking shell's already-loaded environment.
+Fixed by `exec`-ing a fresh `zsh` at the very end, in the same terminal
+window; exiting it returns to whatever shell the script was run from.
+Commit: `2538b4a`.
+
+## 2026-Aug-30
+
+1. `TODO.md` reorganized; mba13-mac onboarding marked complete
+
+Confirmed the Obsidian sync-loop test (edit on one device → auto-commit
+→ push → pull on the other) actually works end-to-end — checked off in
+`TODO.md`. Demoted four items (LiveSync+CouchDB, LUKS remote-unlock,
+BIOS power-loss, Tailscale/ufw bypass) from "High priority" to a
+renamed "Low priority" section, and deduped two sets of entries that
+had accumulated. Commit: `ea3962f`.
+
+Filled mba13-mac's real AM-tailnet IP (`100.71.170.17`) into
+`HOMELAB.md`'s machine table, and flipped its inbound-blocked /
+Tailscale-SSH-off hardening status from "TBD" to confirmed-done.
+Checked off in `TODO.md` and `mba13/todo_mba13-mac_onboard.md` — the
+mba13-mac onboarding tracked since 2026-Aug-21 is now complete. Commit:
+`b990c9f`.
+
+## 2026-Aug-31
+
+1. `hindi_translation` tool: Hinglish transcription via Trelis/tara
+
+Added `tools/hindi_translation/hinglish_transcribe.py <audio_file>
+[override_model_path] [--mode {mixedcode,hindi}]` — transcribes
+Hindi/Hinglish audio via the Trelis/tara Whisper model (2B params,
+BF16 safetensors), auto-chunking audio into ≤30s segments per the
+model's limit and stitching the transcript back together. Defaults to
+mixed-code (Hinglish) output. Default model path `~/models/tara`; if
+missing, prompts for permission, shows a disk-space-vs-estimated-size
+percentage, prompts again, then clones via `git+SSH`
+(`git@hf.co:Trelis/tara`) reusing the SSH access already set up for
+Hugging Face. Verified `--help`/error paths; not yet tested against a
+real download/inference run (no GPU/model on geekom at the time).
+Commit: `6170f77`.
+
+## 2026-Sep-01
+
+1. Aliases added directly on GitHub (bypassed this repo's usual flow)
+
+A commit titled "Add aliases" (`70aba46`) landed on `dotfiles/aliases.sh`
+pushed straight to GitHub, outside a Claude Code session — added
+`shix`/`sham`/`shag`/`obsidian`-style aliases. Left an unclosed
+`brave-debug()` function (fixed the next day, see 2026-Sep-02 item 3
+below).
+
+## 2026-Sep-02
+
+1. `hinglish_transcribe.py` extended: `--minutes`, `--profile`, file
+   output, interactive prompts, default `~/transcripts/` output dir
+
+Several small additions to the Hinglish transcription tool from
+2026-Aug-31, same session:
+
+- `--minutes` caps how much of the file gets transcribed (fractional
+  minutes allowed), passed through to `librosa.load`'s `duration=` so
+  decoding stops early rather than loading the whole file first —
+  useful for a quick test on a long file. Also added test-audio
+  extensions (`*.mp3`/`*.wav`/`*.m4a`/`*.flac`) to `.gitignore` after
+  catching a stray `clip.mp3` about to get committed. Commit: `03bcd6f`.
+- `--profile` adds a background CPU/RAM sampler (`psutil`, every 0.5s)
+  plus GPU memory (`nvidia-smi` if present, else
+  `torch.cuda.memory_allocated()`) and per-chunk timing, active only
+  during the actual transcription loop — reports seconds-of-processing
+  per minute of audio, a real inference-speed rate rather than
+  wall-clock-including-setup. Commit: `524580c`.
+- `-o`/`--output` writes the transcript to a file (still printed to
+  stdout too); `--profile-output` does the same for the profile report.
+  New `prompt_for_missing_args()`: in an interactive terminal with any
+  of `--minutes`/`--output`/`--profile`/`--profile-output` left unset,
+  asks for each instead of silently defaulting — flags already given
+  are used as-is, piped/scripted runs skip prompting entirely. Audio-file
+  existence is checked before prompting. Commit: `44120bd`.
+- Default output files to `~/transcripts/` (`<audio-stem>.txt` /
+  `<audio-stem>.profile.txt`) via a new `prompt_output_path()` helper —
+  asks whether to write a file at all, then offers that default path or
+  a custom one. `~/transcripts/` is created automatically on write.
+  Commit: `086013f`.
+
+2. Merged the direct-to-GitHub "Add aliases" commit, fixed the syntax
+   error it left, logged a cleanup TODO
+
+Merged `70aba46` (2026-Sep-01, pushed outside a session) into this
+session's branch (`b8744f4`). Its unclosed `brave-debug()` function was
+a real syntax error that would break shell startup on every machine,
+since `dotfiles/aliases.sh` is sourced directly from the repo checkout
+— no `chezmoi apply` needed for it to take effect. Fixed with the
+missing closing brace, verified with `bash -n`/`zsh -n`. Commit:
+`7e05e01`. Left further cleanup for later — some of the newly added
+aliases likely belong in `dot_zshrc.tmpl`'s per-machine blocks instead
+of this shared file, and `ll`/`la`/`l`/`alert` appear to have been
+accidentally removed — logged as a `TODO.md` item rather than fixed
+inline. Commit: `6c577a1`.
+
+3. Karabiner configs added for mba13/mbp16; mba13's UK keyboard
+   documented
+
+Added `karabiner/caps_lock_to_hyper.json` (shared across both Macs —
+remaps Caps Lock to a Hyper key: Left Shift held with
+Command+Control+Option, the standard workaround since Karabiner's `to`
+event needs a `key_code` to attach modifiers to) and
+`mba13/karabiner/uk_to_us_keyboard.json` — a trimmed, 3-manipulator
+version of a Karabiner-store "UK→US Mac" rule, with the original's
+first two manipulators (a Shift+3/Option+3 `#`/`£` swap) removed since
+mba13's specific keyboard already produces `#` on Shift+3 without any
+remapping. `basic_setup.sh` got a new Karabiner section that stages the
+right file(s) into
+`~/.config/karabiner/assets/complex_modifications/` per detected
+machine and prints the paths — enabling a rule in the Karabiner-Elements
+UI stays a manual step.
+
+Also confirmed and documented mba13's exact keyboard: model
+`MLY33ZS/A` (MacBook Air 13" M2 2022, `ZS/A` = India region code),
+built-in keyboard reporting `is_built_in_keyboard: true`,
+`transport: FIFO`, no `vendor_id`/`product_id` (Apple Silicon internal
+keyboards aren't on the USB bus) — confirming `device_if`'s
+`is_built_in_keyboard: true` identifier, not the `vendor_id`
+checks, is what actually matches this device. Physical layout is
+almost certainly British/ISO English (India-region default, matches
+the extra ISO key/`§`±` key/Shift+3→`#` behavior observed directly);
+`ioreg -c AppleHIDKeyboard | grep -i keyboardtype` returned no output
+when tried, so the numeric `AppleKeyboardType` ID itself is still
+unconfirmed. All written up in `mba13/karabiner/README.md` and
+`karabiner/README.md`. Commit: `23189fb`.
+
 ## Before 2026-Aug-14
 
 
