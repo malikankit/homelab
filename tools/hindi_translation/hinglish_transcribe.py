@@ -257,6 +257,39 @@ def transcribe(
     return " ".join(p for p in pieces if p)
 
 
+def prompt_for_missing_args(args: argparse.Namespace) -> None:
+    """Interactively ask for minutes/output/profile/profile-output, but only
+    for whichever of those weren't already given as flags -- and only when
+    actually running in a terminal (skipped for scripted/piped use).
+    """
+    if not sys.stdin.isatty():
+        return
+
+    if args.minutes is None:
+        raw = input("Limit to first N minutes? (blank = whole file): ").strip()
+        if raw:
+            args.minutes = float(raw)
+
+    if args.output is None:
+        raw = input("Write transcript to a file? (blank = just print): ").strip()
+        args.output = raw or None
+
+    if not args.profile:
+        raw = input("Enable profiling? [y/N]: ").strip().lower()
+        args.profile = raw == "y"
+
+    if args.profile and args.profile_output is None:
+        raw = input("Write profile report to a file? (blank = just print): ").strip()
+        args.profile_output = raw or None
+
+
+def write_text(path_str: str, content: str, label: str) -> None:
+    path = Path(path_str).expanduser()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content, encoding="utf-8")
+    print(f"({label} also written to {path})")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("filename", help="Path to the audio file to transcribe.")
@@ -287,11 +320,24 @@ def main() -> None:
         "(seconds of processing per minute of audio, plus resource usage sampled "
         "every 0.5s during inference). Requires psutil.",
     )
+    parser.add_argument(
+        "-o",
+        "--output",
+        default=None,
+        help="Write the transcript to this file (still printed to stdout too).",
+    )
+    parser.add_argument(
+        "--profile-output",
+        default=None,
+        help="Write the --profile report to this file (still printed to stdout too).",
+    )
     args = parser.parse_args()
 
     audio_path = Path(args.filename).expanduser()
     if not audio_path.exists():
         sys.exit(f"ERROR: audio file not found: {audio_path}")
+
+    prompt_for_missing_args(args)
 
     if args.override_model:
         model_dir = Path(args.override_model).expanduser()
@@ -316,9 +362,14 @@ def main() -> None:
         profiler=profiler,
     )
     print(transcript)
+    if args.output:
+        write_text(args.output, transcript, "Transcript")
 
     if profiler is not None:
-        print(profiler.report())
+        report = profiler.report()
+        print(report)
+        if args.profile_output:
+            write_text(args.profile_output, report, "Profile")
 
 
 if __name__ == "__main__":

@@ -20,7 +20,14 @@ python3 hinglish_transcribe.py <audio_file> [override_model_path]
 python3 hinglish_transcribe.py <audio_file> --mode hindi
 python3 hinglish_transcribe.py <audio_file> --minutes 3
 python3 hinglish_transcribe.py <audio_file> --profile
+python3 hinglish_transcribe.py <audio_file> --minutes 3 -o out.txt --profile --profile-output profile.txt
 ```
+
+**Interactive prompts**: run it in a terminal with `--minutes`/`--output`/
+`--profile`/`--profile-output` left unset, and it'll ask for each of
+those one at a time (blank answer = default/skip that one). Any of
+them given as a flag is used as-is and not re-asked. Piped/scripted
+runs (not a terminal) skip prompting entirely, using flag defaults.
 
 - `audio_file` — required. Any format `librosa`/`soundfile` can read
   (wav, mp3, flac, m4a, ...). Automatically resampled to 16 kHz mono
@@ -43,22 +50,24 @@ python3 hinglish_transcribe.py <audio_file> --profile
   inference — plus GPU memory if `nvidia-smi` is on `PATH` or a CUDA
   device is active. Only covers the actual transcription loop, not
   model loading or audio decoding, so the rate reflects inference
-  speed specifically. Example output (illustrative numbers, not a real
-  benchmark):
+  speed specifically — see the example output further below.
+- `-o, --output FILE` — optional, write the transcript to `FILE`
+  (still printed to stdout too — nothing is suppressed).
+- `--profile-output FILE` — optional, write the `--profile` report to
+  `FILE` (also still printed to stdout).
 
-  ```
-  === Profile ===
-  Audio processed: 180.0s (3.00 min)
-  Wall time:       42.1s
-  Rate:            14.0s of processing per minute of audio
-  Chunks:          6 (avg 7.0s/chunk, 30s audio each)
-  CPU (this process): avg 340%, peak 410%
-  RAM (this process): avg 4210 MB, peak 4550 MB
-  Device:          cpu (no GPU memory stats captured)
-  ```
+Example `--profile` output (illustrative numbers, not a real benchmark):
 
-Output is printed to stdout — redirect to a file if you want it saved:
-`python3 hinglish_transcribe.py clip.wav > clip.txt`
+```
+=== Profile ===
+Audio processed: 180.0s (3.00 min)
+Wall time:       42.1s
+Rate:            14.0s of processing per minute of audio
+Chunks:          6 (avg 7.0s/chunk, 30s audio each)
+CPU (this process): avg 340%, peak 410%
+RAM (this process): avg 4210 MB, peak 4550 MB
+Device:          cpu (no GPU memory stats captured)
+```
 
 ## Default model
 
