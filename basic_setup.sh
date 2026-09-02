@@ -187,6 +187,26 @@ section_sshfs() {
   fi
 }
 
+section_karabiner() {
+  local dest="$HOME/.config/karabiner/assets/complex_modifications"
+  mkdir -p "$dest"
+
+  local files=("$REPO_ROOT/karabiner/caps_lock_to_hyper.json")
+  if [[ "$MACHINE" == "mba13-mac" ]]; then
+    files+=("$REPO_ROOT/mba13/karabiner/uk_to_us_keyboard.json")
+  fi
+
+  for f in "${files[@]}"; do
+    cp "$f" "$dest/"
+    echo "Copied: $dest/$(basename "$f")"
+  done
+
+  echo
+  echo "Rules are copied but not enabled yet — that step is manual:"
+  echo "open Karabiner-Elements -> Complex Modifications -> Add rule,"
+  echo "and enable each one from the list."
+}
+
 # ── Run ───────────────────────────────────────────────────────────────
 
 run_section "Oh My Zsh" \
@@ -212,6 +232,10 @@ run_section "vim-plug + Markdown-preview plugins" \
 run_section "sshfs (mount geekom's ~/code as ~/6l/code)" \
   "Installs FUSE-T + sshfs via Homebrew, for the mountg/umountg aliases in .zshrc. FUSE-T needs a one-time System Settings approval (no Recovery Mode/kext hassle) before it actually works (instructions printed if this is a fresh install)." \
   section_sshfs
+
+run_section "Karabiner-Elements complex modifications" \
+  "Copies this repo's Karabiner rules (caps_lock_to_hyper, plus mba13's UK-keyboard remap if this is mba13-mac) into ~/.config/karabiner/assets/complex_modifications/. Doesn't install Karabiner-Elements itself, and doesn't enable the rules — just stages the files and prints where they landed." \
+  section_karabiner
 
 echo "Done."
 if [[ "$SHELL" != *zsh* ]]; then
