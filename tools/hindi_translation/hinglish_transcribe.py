@@ -91,7 +91,9 @@ def load_model(model_dir: Path):
     return processor, model, device, dtype
 
 
-def transcribe(audio_path: Path, processor, model, device, dtype, mode: str) -> str:
+def transcribe(
+    audio_path: Path, processor, model, device, dtype, mode: str, max_minutes: float | None = None
+) -> str:
     import librosa
 
     tk = processor.tokenizer
@@ -105,7 +107,13 @@ def transcribe(audio_path: Path, processor, model, device, dtype, mode: str) -> 
     else:
         forced_decoder_ids = [(1, hi), (2, trn), (3, nts)]
 
-    audio, _ = librosa.load(str(audio_path), sr=SAMPLE_RATE, mono=True)
+    # duration=... (seconds) stops librosa decoding past that point, rather
+    # than loading the whole file and truncating afterward -- matters for
+    # long files when you only want e.g. the first 3 minutes.
+    load_kwargs = {"sr": SAMPLE_RATE, "mono": True}
+    if max_minutes is not None:
+        load_kwargs["duration"] = max_minutes * 60
+    audio, _ = librosa.load(str(audio_path), **load_kwargs)
     chunk_samples = CHUNK_SECONDS * SAMPLE_RATE
 
     pieces = []
@@ -142,6 +150,13 @@ def main() -> None:
         help="mixedcode = Hinglish output, English stays in Latin script (default). "
         "hindi = pure Hindi, Devanagari only.",
     )
+    parser.add_argument(
+        "--minutes",
+        type=float,
+        default=None,
+        help="Only transcribe the first N minutes of the file (fractional allowed, e.g. 1.5). "
+        "Default: transcribe the whole file.",
+    )
     args = parser.parse_args()
 
     audio_path = Path(args.filename).expanduser()
@@ -158,7 +173,9 @@ def main() -> None:
     ensure_model(model_dir, is_override)
 
     processor, model, device, dtype = load_model(model_dir)
-    transcript = transcribe(audio_path, processor, model, device, dtype, args.mode)
+    transcript = transcribe(
+        audio_path, processor, model, device, dtype, args.mode, max_minutes=args.minutes
+    )
     print(transcript)
 
 

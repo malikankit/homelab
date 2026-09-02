@@ -18,6 +18,7 @@ pip install -r requirements.txt
 ```bash
 python3 hinglish_transcribe.py <audio_file> [override_model_path]
 python3 hinglish_transcribe.py <audio_file> --mode hindi
+python3 hinglish_transcribe.py <audio_file> --minutes 3
 ```
 
 - `audio_file` — required. Any format `librosa`/`soundfile` can read
@@ -31,6 +32,10 @@ python3 hinglish_transcribe.py <audio_file> --mode hindi
 - `--mode {mixedcode,hindi}` — default `mixedcode` (Hinglish: English
   words stay in Latin script, matching the script's name). `hindi`
   forces pure Devanagari output.
+- `--minutes N` — optional, only transcribe the first N minutes of the
+  file (fractional allowed, e.g. `--minutes 1.5`). Useful for a quick
+  test on a long file — decoding stops at that point rather than
+  loading/transcribing the whole thing first.
 
 Output is printed to stdout — redirect to a file if you want it saved:
 `python3 hinglish_transcribe.py clip.wav > clip.txt`
