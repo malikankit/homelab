@@ -25,9 +25,16 @@ python3 hinglish_transcribe.py <audio_file> --minutes 3 -o out.txt --profile --p
 
 **Interactive prompts**: run it in a terminal with `--minutes`/`--output`/
 `--profile`/`--profile-output` left unset, and it'll ask for each of
-those one at a time (blank answer = default/skip that one). Any of
-them given as a flag is used as-is and not re-asked. Piped/scripted
-runs (not a terminal) skip prompting entirely, using flag defaults.
+those one at a time. Any of them given as a flag is used as-is and not
+re-asked. Piped/scripted runs (not a terminal) skip prompting entirely,
+using flag defaults.
+
+For the transcript and profile-report files specifically, the prompt
+flow is: ask whether to write one at all → if yes, offer the default
+path under `~/transcripts/` (`<audio-file-stem>.txt` /
+`<audio-file-stem>.profile.txt`) → accept it, or type a full custom
+path instead. `~/transcripts/` is created automatically if it doesn't
+exist yet.
 
 - `audio_file` — required. Any format `librosa`/`soundfile` can read
   (wav, mp3, flac, m4a, ...). Automatically resampled to 16 kHz mono

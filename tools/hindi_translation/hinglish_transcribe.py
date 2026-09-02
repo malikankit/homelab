@@ -20,6 +20,7 @@ import time
 from pathlib import Path
 
 DEFAULT_MODEL_DIR = Path.home() / "models" / "tara"
+DEFAULT_OUTPUT_DIR = Path.home() / "transcripts"
 HF_SSH_REMOTE = "git@hf.co:Trelis/tara"
 
 # Tara is a ~2B-parameter Whisper-large-v3-architecture model in BF16
@@ -257,7 +258,22 @@ def transcribe(
     return " ".join(p for p in pieces if p)
 
 
-def prompt_for_missing_args(args: argparse.Namespace) -> None:
+def prompt_output_path(kind_label: str, default_path: Path) -> str | None:
+    """Ask whether to write `kind_label` to a file at all, then whether
+    `default_path` (under DEFAULT_OUTPUT_DIR) is fine or a full custom path
+    should be used instead. Returns None if the user opts to skip writing.
+    """
+    raw = input(f"Write {kind_label} to a file? [Y/n]: ").strip().lower()
+    if raw == "n":
+        return None
+
+    raw = input(f"Save to {default_path}? [Y/n]: ").strip().lower()
+    if raw == "n":
+        return input("Enter full output path: ").strip()
+    return str(default_path)
+
+
+def prompt_for_missing_args(args: argparse.Namespace, audio_path: Path) -> None:
     """Interactively ask for minutes/output/profile/profile-output, but only
     for whichever of those weren't already given as flags -- and only when
     actually running in a terminal (skipped for scripted/piped use).
@@ -271,16 +287,16 @@ def prompt_for_missing_args(args: argparse.Namespace) -> None:
             args.minutes = float(raw)
 
     if args.output is None:
-        raw = input("Write transcript to a file? (blank = just print): ").strip()
-        args.output = raw or None
+        default_transcript = DEFAULT_OUTPUT_DIR / f"{audio_path.stem}.txt"
+        args.output = prompt_output_path("the transcript", default_transcript)
 
     if not args.profile:
         raw = input("Enable profiling? [y/N]: ").strip().lower()
         args.profile = raw == "y"
 
     if args.profile and args.profile_output is None:
-        raw = input("Write profile report to a file? (blank = just print): ").strip()
-        args.profile_output = raw or None
+        default_profile = DEFAULT_OUTPUT_DIR / f"{audio_path.stem}.profile.txt"
+        args.profile_output = prompt_output_path("the profile report", default_profile)
 
 
 def write_text(path_str: str, content: str, label: str) -> None:
@@ -337,7 +353,7 @@ def main() -> None:
     if not audio_path.exists():
         sys.exit(f"ERROR: audio file not found: {audio_path}")
 
-    prompt_for_missing_args(args)
+    prompt_for_missing_args(args, audio_path)
 
     if args.override_model:
         model_dir = Path(args.override_model).expanduser()
