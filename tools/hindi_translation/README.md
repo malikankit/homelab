@@ -19,6 +19,7 @@ pip install -r requirements.txt
 python3 hinglish_transcribe.py <audio_file> [override_model_path]
 python3 hinglish_transcribe.py <audio_file> --mode hindi
 python3 hinglish_transcribe.py <audio_file> --minutes 3
+python3 hinglish_transcribe.py <audio_file> --profile
 ```
 
 - `audio_file` — required. Any format `librosa`/`soundfile` can read
@@ -36,6 +37,25 @@ python3 hinglish_transcribe.py <audio_file> --minutes 3
   file (fractional allowed, e.g. `--minutes 1.5`). Useful for a quick
   test on a long file — decoding stops at that point rather than
   loading/transcribing the whole thing first.
+- `--profile` — optional, prints a timing + resource report after the
+  transcript: seconds of processing per minute of audio, per-chunk
+  timing, and CPU/RAM (this process) sampled every 0.5s during
+  inference — plus GPU memory if `nvidia-smi` is on `PATH` or a CUDA
+  device is active. Only covers the actual transcription loop, not
+  model loading or audio decoding, so the rate reflects inference
+  speed specifically. Example output (illustrative numbers, not a real
+  benchmark):
+
+  ```
+  === Profile ===
+  Audio processed: 180.0s (3.00 min)
+  Wall time:       42.1s
+  Rate:            14.0s of processing per minute of audio
+  Chunks:          6 (avg 7.0s/chunk, 30s audio each)
+  CPU (this process): avg 340%, peak 410%
+  RAM (this process): avg 4210 MB, peak 4550 MB
+  Device:          cpu (no GPU memory stats captured)
+  ```
 
 Output is printed to stdout — redirect to a file if you want it saved:
 `python3 hinglish_transcribe.py clip.wav > clip.txt`

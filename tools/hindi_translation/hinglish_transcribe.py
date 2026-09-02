@@ -15,6 +15,8 @@ import argparse
 import shutil
 import subprocess
 import sys
+import threading
+import time
 from pathlib import Path
 
 DEFAULT_MODEL_DIR = Path.home() / "models" / "tara"
@@ -77,6 +79,110 @@ def ensure_model(model_dir: Path, is_override: bool) -> None:
     download_model(model_dir)
 
 
+class Profiler:
+    """Background CPU/RAM/GPU-memory sampler + per-chunk timing, for --profile.
+
+    Started right before the transcription loop and stopped right after, so
+    the reported rate reflects actual inference time -- not model loading or
+    audio decoding.
+    """
+
+    SAMPLE_INTERVAL_SECONDS = 0.5
+
+    def __init__(self, device: str):
+        self.device = device
+        self.audio_seconds = 0.0
+        self.chunk_seconds: list[float] = []
+        self.cpu_percent_samples: list[float] = []
+        self.rss_mb_samples: list[float] = []
+        self.gpu_mem_mb_samples: list[float] = []
+        self._has_nvidia_smi = shutil.which("nvidia-smi") is not None
+        self._stop_event = threading.Event()
+        self._thread: threading.Thread | None = None
+        self._t0 = 0.0
+        self.total_wall_seconds = 0.0
+
+    def _sample_gpu_mem_mb(self):
+        if self._has_nvidia_smi:
+            try:
+                out = subprocess.run(
+                    ["nvidia-smi", "--query-gpu=memory.used", "--format=csv,noheader,nounits"],
+                    capture_output=True,
+                    text=True,
+                    timeout=2,
+                )
+                return float(out.stdout.strip().splitlines()[0])
+            except Exception:
+                return None
+        if self.device == "cuda":
+            import torch
+
+            return torch.cuda.memory_allocated() / 1e6
+        return None
+
+    def _sample_loop(self):
+        import psutil
+
+        proc = psutil.Process()
+        proc.cpu_percent(interval=None)  # first call just primes the baseline
+        while not self._stop_event.is_set():
+            self.cpu_percent_samples.append(proc.cpu_percent(interval=None))
+            self.rss_mb_samples.append(proc.memory_info().rss / 1e6)
+            gpu_mb = self._sample_gpu_mem_mb()
+            if gpu_mb is not None:
+                self.gpu_mem_mb_samples.append(gpu_mb)
+            self._stop_event.wait(self.SAMPLE_INTERVAL_SECONDS)
+
+    def start(self):
+        self._t0 = time.perf_counter()
+        self._thread = threading.Thread(target=self._sample_loop, daemon=True)
+        self._thread.start()
+
+    def stop(self):
+        self.total_wall_seconds = time.perf_counter() - self._t0
+        self._stop_event.set()
+        if self._thread is not None:
+            self._thread.join(timeout=2)
+
+    def record_chunk(self, seconds: float):
+        self.chunk_seconds.append(seconds)
+
+    def report(self) -> str:
+        minutes = self.audio_seconds / 60
+        rate = self.total_wall_seconds / minutes if minutes else float("nan")
+        lines = [
+            "",
+            "=== Profile ===",
+            f"Audio processed: {self.audio_seconds:.1f}s ({minutes:.2f} min)",
+            f"Wall time:       {self.total_wall_seconds:.1f}s",
+            f"Rate:            {rate:.1f}s of processing per minute of audio",
+        ]
+        if self.chunk_seconds:
+            avg_chunk = sum(self.chunk_seconds) / len(self.chunk_seconds)
+            lines.append(
+                f"Chunks:          {len(self.chunk_seconds)} "
+                f"(avg {avg_chunk:.1f}s/chunk, {CHUNK_SECONDS}s audio each)"
+            )
+        if self.cpu_percent_samples:
+            avg_cpu = sum(self.cpu_percent_samples) / len(self.cpu_percent_samples)
+            lines.append(
+                f"CPU (this process): avg {avg_cpu:.0f}%, peak {max(self.cpu_percent_samples):.0f}%"
+            )
+        if self.rss_mb_samples:
+            avg_rss = sum(self.rss_mb_samples) / len(self.rss_mb_samples)
+            lines.append(
+                f"RAM (this process): avg {avg_rss:.0f} MB, peak {max(self.rss_mb_samples):.0f} MB"
+            )
+        if self.gpu_mem_mb_samples:
+            avg_gpu = sum(self.gpu_mem_mb_samples) / len(self.gpu_mem_mb_samples)
+            lines.append(
+                f"GPU memory:      avg {avg_gpu:.0f} MB, peak {max(self.gpu_mem_mb_samples):.0f} MB"
+            )
+        else:
+            lines.append(f"Device:          {self.device} (no GPU memory stats captured)")
+        return "\n".join(lines)
+
+
 def load_model(model_dir: Path):
     import torch
     from transformers import WhisperForConditionalGeneration, WhisperProcessor
@@ -92,7 +198,14 @@ def load_model(model_dir: Path):
 
 
 def transcribe(
-    audio_path: Path, processor, model, device, dtype, mode: str, max_minutes: float | None = None
+    audio_path: Path,
+    processor,
+    model,
+    device,
+    dtype,
+    mode: str,
+    max_minutes: float | None = None,
+    profiler: "Profiler | None" = None,
 ) -> str:
     import librosa
 
@@ -116,11 +229,16 @@ def transcribe(
     audio, _ = librosa.load(str(audio_path), **load_kwargs)
     chunk_samples = CHUNK_SECONDS * SAMPLE_RATE
 
+    if profiler is not None:
+        profiler.audio_seconds = len(audio) / SAMPLE_RATE
+        profiler.start()
+
     pieces = []
     for start in range(0, len(audio), chunk_samples):
         chunk = audio[start : start + chunk_samples]
         if len(chunk) == 0:
             continue
+        chunk_t0 = time.perf_counter()
         feats = processor(
             chunk, sampling_rate=SAMPLE_RATE, return_tensors="pt"
         ).input_features.to(device, dtype)
@@ -129,7 +247,12 @@ def transcribe(
             forced_decoder_ids=forced_decoder_ids,
             max_new_tokens=444,
         )
+        if profiler is not None:
+            profiler.record_chunk(time.perf_counter() - chunk_t0)
         pieces.append(tk.decode(out[0], skip_special_tokens=True).strip())
+
+    if profiler is not None:
+        profiler.stop()
 
     return " ".join(p for p in pieces if p)
 
@@ -157,6 +280,13 @@ def main() -> None:
         help="Only transcribe the first N minutes of the file (fractional allowed, e.g. 1.5). "
         "Default: transcribe the whole file.",
     )
+    parser.add_argument(
+        "--profile",
+        action="store_true",
+        help="Print a timing + CPU/RAM/GPU-memory profile after transcribing "
+        "(seconds of processing per minute of audio, plus resource usage sampled "
+        "every 0.5s during inference). Requires psutil.",
+    )
     args = parser.parse_args()
 
     audio_path = Path(args.filename).expanduser()
@@ -173,10 +303,22 @@ def main() -> None:
     ensure_model(model_dir, is_override)
 
     processor, model, device, dtype = load_model(model_dir)
+
+    profiler = Profiler(device) if args.profile else None
     transcript = transcribe(
-        audio_path, processor, model, device, dtype, args.mode, max_minutes=args.minutes
+        audio_path,
+        processor,
+        model,
+        device,
+        dtype,
+        args.mode,
+        max_minutes=args.minutes,
+        profiler=profiler,
     )
     print(transcript)
+
+    if profiler is not None:
+        print(profiler.report())
 
 
 if __name__ == "__main__":
