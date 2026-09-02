@@ -28,3 +28,4 @@ while pgrep -x "Brave Browser" >/dev/null; do sleep 0.3; done
 open -na "Brave Browser" --args --remote-debugging-port=9222 --profile-directory="Profile 88"
 alias aliases="vi ~/code/homelab/dotfiles/aliases.sh"
 echo "alias obsidian='open -a Obsidian'"
+}
