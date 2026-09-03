@@ -25,3 +25,11 @@
   additional `.<stage>-<method>` segments as more steps get applied —
   see `tools/hindi_translation/transliterate.py`'s
   `build_output_filename()` for a working example.
+
+- **Open work items live in `issues/`, one file per issue** — not in
+  `TODO.md`, which is kept only as a historical record of completed
+  work. See `issues/README.md` for the frontmatter/status convention
+  (`open`/`blocked`/`closed`) and when to also write a fuller
+  `ai-learning/suspended-contexts/` note alongside an issue file. When
+  work happens on an issue, append a dated entry rather than rewriting
+  history in place, and bump `updated:` in its frontmatter.
