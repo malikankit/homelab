@@ -207,7 +207,7 @@ def transcribe(
     mode: str,
     max_minutes: float | None = None,
     profiler: "Profiler | None" = None,
-) -> str:
+) -> dict:
     import librosa
     import torch
 
@@ -215,16 +215,33 @@ def transcribe(
     hi = tk.convert_tokens_to_ids("<|hi|>")
     mc = tk.convert_tokens_to_ids("<|mixedcode|>")
     trn = tk.convert_tokens_to_ids("<|transcribe|>")
-    nts = tk.convert_tokens_to_ids("<|notimestamps|>")
 
     # `forced_decoder_ids` was removed as a `generate()` kwarg in newer
     # transformers versions -- the replacement is to bake those forced
     # tokens into the decoder_input_ids prefix instead (decoder_start_token
     # first, matching what forced_decoder_ids' position-1 token used to mean).
+    #
+    # `<|notimestamps|>` is deliberately NOT forced anymore, as of
+    # 2026-09-03 -- timestamps are now the default (not an opt-in flag),
+    # needed to align transcript segments against diarization output in a
+    # later pipeline step. See
+    # ai-learning/suspended-contexts/2026-09-03-hinglish-transliteration-diarization.md
+    # for why. This dropped the plain-text-only behavior that used to be
+    # the default; `transcribe()`'s return type changed from `str` to a
+    # `{"text": ..., "segments": [...]}` dict accordingly (see below).
+    #
+    # UNTESTED as of this change -- not yet run against real audio (held
+    # off deliberately, see the same suspended-context note). The
+    # offset-parsing below (`output_offsets=True`) is based on
+    # transformers' documented WhisperProcessor behavior; verify the
+    # actual returned shape against the installed transformers version
+    # (5.16.1 as of the last successful run) before trusting it live --
+    # the same kind of API drift that broke `forced_decoder_ids` earlier
+    # in this file could just as easily apply here.
     if mode == "mixedcode":
-        forced_ids = [hi, mc, trn, nts]
+        forced_ids = [hi, mc, trn]
     else:
-        forced_ids = [hi, trn, nts]
+        forced_ids = [hi, trn]
     decoder_start_id = model.config.decoder_start_token_id
     decoder_prompt_ids = [decoder_start_id] + forced_ids
 
@@ -242,10 +259,12 @@ def transcribe(
         profiler.start()
 
     pieces = []
+    segments = []
     for start in range(0, len(audio), chunk_samples):
         chunk = audio[start : start + chunk_samples]
         if len(chunk) == 0:
             continue
+        chunk_offset_seconds = start / SAMPLE_RATE
         chunk_t0 = time.perf_counter()
         feats = processor(
             chunk, sampling_rate=SAMPLE_RATE, return_tensors="pt"
@@ -261,12 +280,33 @@ def transcribe(
         )
         if profiler is not None:
             profiler.record_chunk(time.perf_counter() - chunk_t0)
-        pieces.append(tk.decode(out[0], skip_special_tokens=True).strip())
+
+        # output_offsets=True asks the tokenizer to also return per-segment
+        # (text, timestamp) pairs it parsed out of the timestamp tokens the
+        # model emitted -- see the UNTESTED note above `forced_ids` for the
+        # caveat on this. Offsets are chunk-local seconds; add
+        # chunk_offset_seconds to get absolute time in the full audio file.
+        decoded = processor.batch_decode(
+            out, skip_special_tokens=True, output_offsets=True
+        )[0]
+        text = decoded["text"].strip()
+        pieces.append(text)
+        for seg in decoded.get("offsets", []):
+            seg_start, seg_end = seg["timestamp"]
+            if seg_start is None:
+                continue
+            segments.append(
+                {
+                    "start": round(chunk_offset_seconds + seg_start, 2),
+                    "end": round(chunk_offset_seconds + seg_end, 2) if seg_end is not None else None,
+                    "text": seg["text"].strip(),
+                }
+            )
 
     if profiler is not None:
         profiler.stop()
 
-    return " ".join(p for p in pieces if p)
+    return {"text": " ".join(p for p in pieces if p), "segments": segments}
 
 
 def prompt_output_path(kind_label: str, default_path: Path) -> str | None:
@@ -378,7 +418,7 @@ def main() -> None:
     processor, model, device, dtype = load_model(model_dir)
 
     profiler = Profiler(device) if args.profile else None
-    transcript = transcribe(
+    result = transcribe(
         audio_path,
         processor,
         model,
@@ -388,9 +428,21 @@ def main() -> None:
         max_minutes=args.minutes,
         profiler=profiler,
     )
+    transcript = result["text"]
     print(transcript)
     if args.output:
         write_text(args.output, transcript, "Transcript")
+        # Sibling segments file (per-segment start/end/text), for a later
+        # diarization merge pass -- always written alongside -o now that
+        # timestamps are the default. UNTESTED, see transcribe()'s note.
+        import json
+
+        segments_path = Path(args.output).expanduser().with_suffix(".segments.json")
+        segments_path.parent.mkdir(parents=True, exist_ok=True)
+        segments_path.write_text(
+            json.dumps(result["segments"], ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        print(f"(Segment timestamps also written to {segments_path})")
 
     if profiler is not None:
         report = profiler.report()
