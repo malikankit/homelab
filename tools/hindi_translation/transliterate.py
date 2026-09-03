@@ -75,12 +75,16 @@ comparison once the rest of the pipeline is solid.
 ===============================================================================
 """
 import argparse
+import re
 import sys
 import unicodedata
 from datetime import datetime
 from pathlib import Path
 
 DEFAULT_OUTPUT_DIR = Path.home() / "transcripts"
+
+
+DEVANAGARI_RUN = re.compile(r"[ऀ-ॿ]+")
 
 
 def strip_diacritics(text: str) -> str:
@@ -94,18 +98,58 @@ def strip_diacritics(text: str) -> str:
     return "".join(c for c in decomposed if not unicodedata.combining(c))
 
 
+def apply_word_final_schwa_deletion(word: str) -> str:
+    """Casual/spoken Hindi drops the trailing inherent "a" vowel that
+    IAST -- a Sanskrit-derived scheme -- always keeps on a word-final
+    consonant. "ankita" (from अंकित) should read "ankit", not "ankita".
+
+    This is a real, studied phenomenon (schwa deletion / schwa syncope);
+    the reference algorithm (Narasimhan, Sproat & Kiraz 2004) also
+    handles mid-word deletion based on syllable weight and consonant
+    clusters, which is meaningfully more complex. This only implements
+    the single highest-value, well-scoped case -- word-final -- as a
+    pragmatic improvement, not the full algorithm.
+
+    MUST be called on the diacritic-preserving IAST string, before
+    strip_diacritics() runs -- that ordering is load-bearing, not
+    incidental. A first version of this got that backwards (checked
+    post-strip) and broke real words: था ("thā", "was") stripped to
+    plain "a" is indistinguishable from अंकित's inherent-schwa "a" once
+    diacritics are gone, so a post-strip check deleted both, turning
+    "tha" into "th", "diya" (दिया, "gave") into "diy", "hona" (होना, "to
+    be") into "hon". Checking pre-strip fixes this for free: an explicit
+    long vowel is spelled "ā" (a distinct Unicode character, U+0101),
+    never plain "a", so it naturally fails the `word[-1] == "a"` check
+    below and is correctly left alone -- only genuinely-unmarked,
+    inherent-default "a" ever matches.
+    """
+    if len(word) > 2 and word[-1] == "a" and word[-2] not in "aeiouāīūṛ":
+        return word[:-1]
+    return word
+
+
 def transliterate_rule_based(text: str, style: str) -> str:
     from indic_transliteration import sanscript
     from indic_transliteration.sanscript import transliterate as xlit
 
-    iast = xlit(text, sanscript.DEVANAGARI, sanscript.IAST)
-    # sanscript renders the Devanagari danda (।) as "|" under IAST --
-    # swap it for a period, since "|" reads oddly as sentence punctuation
-    # in Roman script.
-    iast = iast.replace("|", ".")
-    if style == "formal":
-        return iast
-    return strip_diacritics(iast)
+    def convert(match: "re.Match") -> str:
+        # Only the matched Devanagari run gets transliterated -- English
+        # words already in Latin script (e.g. "myasthenia gravis" sitting
+        # inline in a mixedcode transcript) are left completely untouched,
+        # so schwa-deletion below never risks mangling them.
+        iast = xlit(match.group(0), sanscript.DEVANAGARI, sanscript.IAST)
+        # sanscript renders the Devanagari danda (।) as "|" under IAST --
+        # swap it for a period, since "|" reads oddly as sentence
+        # punctuation in Roman script.
+        iast = iast.replace("|", ".")
+        if style == "formal":
+            return iast
+        # Order matters -- see apply_word_final_schwa_deletion()'s
+        # docstring for why this must run before strip_diacritics().
+        deschwa_d = apply_word_final_schwa_deletion(iast)
+        return strip_diacritics(deschwa_d)
+
+    return DEVANAGARI_RUN.sub(convert, text)
 
 
 def transliterate_ml_based(text: str) -> str:
