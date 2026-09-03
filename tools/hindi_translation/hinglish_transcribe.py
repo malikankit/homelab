@@ -209,6 +209,7 @@ def transcribe(
     profiler: "Profiler | None" = None,
 ) -> str:
     import librosa
+    import torch
 
     tk = processor.tokenizer
     hi = tk.convert_tokens_to_ids("<|hi|>")
@@ -216,10 +217,16 @@ def transcribe(
     trn = tk.convert_tokens_to_ids("<|transcribe|>")
     nts = tk.convert_tokens_to_ids("<|notimestamps|>")
 
+    # `forced_decoder_ids` was removed as a `generate()` kwarg in newer
+    # transformers versions -- the replacement is to bake those forced
+    # tokens into the decoder_input_ids prefix instead (decoder_start_token
+    # first, matching what forced_decoder_ids' position-1 token used to mean).
     if mode == "mixedcode":
-        forced_decoder_ids = [(1, hi), (2, mc), (3, trn), (4, nts)]
+        forced_ids = [hi, mc, trn, nts]
     else:
-        forced_decoder_ids = [(1, hi), (2, trn), (3, nts)]
+        forced_ids = [hi, trn, nts]
+    decoder_start_id = model.config.decoder_start_token_id
+    decoder_prompt_ids = [decoder_start_id] + forced_ids
 
     # duration=... (seconds) stops librosa decoding past that point, rather
     # than loading the whole file and truncating afterward -- matters for
@@ -243,10 +250,14 @@ def transcribe(
         feats = processor(
             chunk, sampling_rate=SAMPLE_RATE, return_tensors="pt"
         ).input_features.to(device, dtype)
+        decoder_input_ids = torch.tensor([decoder_prompt_ids], device=device)
         out = model.generate(
             input_features=feats,
-            forced_decoder_ids=forced_decoder_ids,
-            max_new_tokens=444,
+            decoder_input_ids=decoder_input_ids,
+            # 448 = Whisper's max_target_positions; decoder_input_ids now
+            # counts toward that budget (unlike the old forced_decoder_ids,
+            # which didn't), so subtract its length here.
+            max_new_tokens=448 - len(decoder_prompt_ids),
         )
         if profiler is not None:
             profiler.record_chunk(time.perf_counter() - chunk_t0)
