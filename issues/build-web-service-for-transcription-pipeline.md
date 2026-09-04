@@ -71,6 +71,41 @@ under time pressure once someone actually wants it.
   not committed to git, per `services/*/README.md`'s existing
   convention).
 
+## Before building: survey existing self-hosted tools first
+
+Raised 2026-09-04, before any design work started — worth checking
+whether an existing self-hosted app already covers this instead of
+building custom. Candidates named (not yet independently verified —
+came from a Reddit thread + two blog posts, cited by the user, not
+fact-checked by Claude yet):
+
+- **Scriberr** — Docker-based, described as supporting batch files,
+  diarization, and local LLM summaries via Ollama.
+- **TranscriptionSuite** / **Whishper** — described as local web apps
+  with "100% private processing," an "audio notebook" concept, and
+  multi-model support.
+
+Sources given: 
+[r/selfhosted thread](https://www.reddit.com/r/selfhosted/comments/1rsn5s6/host_your_own_audio_transcription_diarization/),
+[txtify.lkmeta.com writeup](https://txtify.lkmeta.com/best-self-hosted-transcription-tools),
+[anarlog.so blog post](https://anarlog.so/blog/selfhosted-ai-notetakers/).
+
+**The key open question for any of these**: can they be pointed at our
+own already-downloaded model weights — specifically **Tara**
+(`~/models/tara`, the Hindi/Hinglish-tuned Whisper model this whole
+pipeline exists to use), rather than being locked into whatever
+general-purpose Whisper variant ships with the tool by default. If a
+candidate tool only supports its own bundled/generic ASR models with no
+way to swap in a custom local checkpoint, it likely defeats the actual
+point of this project (Hinglish-specific transcription quality) even
+if it's otherwise a nicer UI than anything we'd build ourselves.
+
+Worth doing before any custom build: actually try 1-2 of these against
+our real audio and real model, and honestly compare against what
+`hinglish_transcribe.py` + `diarize.py` already produce, rather than
+assuming a custom app is the default right answer just because it's
+what got planned first.
+
 ## Explicitly out of scope for now
 
 - No design decisions locked in here — framework, exact UI, job queue
