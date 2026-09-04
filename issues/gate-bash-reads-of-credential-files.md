@@ -1,8 +1,8 @@
 ---
 title: "Gate Bash-tool reads of credential files (not just the Read tool)"
 status: open
-created: 2026-09-04
-updated: 2026-09-04
+created: 2026-09-03
+updated: 2026-09-03
 tags: [claude-code, security, credentials, hooks, permissions]
 ---
 
@@ -19,7 +19,7 @@ As a first fix, added `permissions.deny` rules to `~/.claude/settings.json`
 file patterns — HF token cache, generic `token`/`credentials` files,
 `.netrc`, `~/.aws/credentials`, and common SSH private key naming
 patterns (excluding `.pub` files). See `homelab` commit history around
-2026-09-04 for the exact rule set.
+2026-09-03 for the exact rule set.
 
 ## The gap
 

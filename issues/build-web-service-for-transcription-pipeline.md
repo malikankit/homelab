@@ -1,8 +1,8 @@
 ---
 title: "Build a web service for the transcription/transliteration/diarization pipeline"
 status: open
-created: 2026-09-04
-updated: 2026-09-04
+created: 2026-09-03
+updated: 2026-09-03
 tags: [hinglish-transcribe, web-service, tailscale, future, planning-only]
 ---
 
@@ -73,7 +73,7 @@ under time pressure once someone actually wants it.
 
 ## Before building: survey existing self-hosted tools first
 
-Raised 2026-09-04, before any design work started — worth checking
+Raised 2026-09-03, before any design work started — worth checking
 whether an existing self-hosted app already covers this instead of
 building custom. Candidates named (not yet independently verified —
 came from a Reddit thread + two blog posts, cited by the user, not
