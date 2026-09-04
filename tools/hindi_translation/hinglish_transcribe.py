@@ -215,33 +215,35 @@ def transcribe(
     hi = tk.convert_tokens_to_ids("<|hi|>")
     mc = tk.convert_tokens_to_ids("<|mixedcode|>")
     trn = tk.convert_tokens_to_ids("<|transcribe|>")
+    nts = tk.convert_tokens_to_ids("<|notimestamps|>")
 
     # `forced_decoder_ids` was removed as a `generate()` kwarg in newer
     # transformers versions -- the replacement is to bake those forced
     # tokens into the decoder_input_ids prefix instead (decoder_start_token
     # first, matching what forced_decoder_ids' position-1 token used to mean).
     #
-    # `<|notimestamps|>` is deliberately NOT forced anymore, as of
-    # 2026-09-03 -- timestamps are now the default (not an opt-in flag),
-    # needed to align transcript segments against diarization output in a
-    # later pipeline step. See
+    # Timestamps: `<|notimestamps|>` IS forced again (reverted 2026-09-04).
+    # A first attempt dropped it to get sub-chunk timestamp tokens from the
+    # model itself, but that didn't pan out -- verified against real audio
+    # that even with `return_timestamps=True` passed to generate(), the
+    # model only ever emits a single opening <|0.00|> token and never a
+    # matching close, so there's nothing for output_offsets to parse
+    # (always came back empty). Likely cause: Whisper's timestamp-token
+    # logic is built around its own internal long-audio auto-chunking,
+    # which this script bypasses by pre-chunking to 30s windows itself --
+    # so relying on the model's own timestamp tokens for sub-chunk
+    # granularity isn't reliable here. Fix: use CHUNK-level timestamps
+    # instead (each 30s window's own known start/end, tracked by this
+    # loop regardless of what the model does) -- coarser than per-sentence,
+    # but fully reliable and needs no timestamp tokens from the model at
+    # all. See
     # ai-learning/suspended-contexts/2026-09-03-hinglish-transliteration-diarization.md
-    # for why. This dropped the plain-text-only behavior that used to be
-    # the default; `transcribe()`'s return type changed from `str` to a
-    # `{"text": ..., "segments": [...]}` dict accordingly (see below).
-    #
-    # UNTESTED as of this change -- not yet run against real audio (held
-    # off deliberately, see the same suspended-context note). The
-    # offset-parsing below (`output_offsets=True`) is based on
-    # transformers' documented WhisperProcessor behavior; verify the
-    # actual returned shape against the installed transformers version
-    # (5.16.1 as of the last successful run) before trusting it live --
-    # the same kind of API drift that broke `forced_decoder_ids` earlier
-    # in this file could just as easily apply here.
+    # for the full history and why chunk-level was pre-approved as an
+    # acceptable fallback for diarization alignment.
     if mode == "mixedcode":
-        forced_ids = [hi, mc, trn]
+        forced_ids = [hi, mc, trn, nts]
     else:
-        forced_ids = [hi, trn]
+        forced_ids = [hi, trn, nts]
     decoder_start_id = model.config.decoder_start_token_id
     decoder_prompt_ids = [decoder_start_id] + forced_ids
 
@@ -281,25 +283,19 @@ def transcribe(
         if profiler is not None:
             profiler.record_chunk(time.perf_counter() - chunk_t0)
 
-        # output_offsets=True asks the tokenizer to also return per-segment
-        # (text, timestamp) pairs it parsed out of the timestamp tokens the
-        # model emitted -- see the UNTESTED note above `forced_ids` for the
-        # caveat on this. Offsets are chunk-local seconds; add
-        # chunk_offset_seconds to get absolute time in the full audio file.
-        decoded = processor.batch_decode(
-            out, skip_special_tokens=True, output_offsets=True
-        )[0]
-        text = decoded["text"].strip()
+        text = tk.decode(out[0], skip_special_tokens=True).strip()
         pieces.append(text)
-        for seg in decoded.get("offsets", []):
-            seg_start, seg_end = seg["timestamp"]
-            if seg_start is None:
-                continue
+        if text:
+            # Chunk-level timestamp, not sub-chunk/per-sentence -- coarser
+            # than originally hoped for, but reliable: derived purely from
+            # this loop's own bookkeeping, not from any timestamp token the
+            # model does or doesn't emit. See the note above `forced_ids`
+            # for why the model-timestamp-token approach was abandoned.
             segments.append(
                 {
-                    "start": round(chunk_offset_seconds + seg_start, 2),
-                    "end": round(chunk_offset_seconds + seg_end, 2) if seg_end is not None else None,
-                    "text": seg["text"].strip(),
+                    "start": round(chunk_offset_seconds, 2),
+                    "end": round(chunk_offset_seconds + len(chunk) / SAMPLE_RATE, 2),
+                    "text": text,
                 }
             )
 

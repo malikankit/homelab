@@ -3,3 +3,5 @@ torch
 librosa
 soundfile
 psutil
+indic-transliteration
+pyannote.audio
