@@ -5,6 +5,15 @@
 # fi
 
 # ═══════════════════════════════════════════════════════
+# Watchdog warnings (geekom's disk-space watchdog, if present)
+# ═══════════════════════════════════════════════════════
+# geekom/watchdogs/disk-space.sh writes this file (tmpfs, self-clearing on
+# reboot) when a filesystem crosses its threshold, and removes it once
+# usage drops back down. Harmless no-op on any machine without that
+# watchdog installed — the file just won't exist there.
+[ -r /run/geekom-watchdogs/disk-space.warn ] && cat /run/geekom-watchdogs/disk-space.warn
+
+# ═══════════════════════════════════════════════════════
 # Auto-attach tmux on SSH login
 # ═══════════════════════════════════════════════════════
 # Only fires for an incoming SSH session (not geekom's own desktop
@@ -112,6 +121,9 @@ fi
 {{- if eq $machine "geekom-linux" }}
 alias sham="ssh -i ~/.ssh/geekom-linux_to_tailnet_ed25519 am@100.105.210.109"
 alias sshme="ssh -i ~/.ssh/geekom-linux_to_tailnet_ed25519"
+# Geekom-only: needs tools/hindi_translation/hf-env (the venv, models,
+# ffmpeg) which only exists here -- not portable to other machines.
+alias audio_to_markdown="~/code/homelab/tools/hindi_translation/audio_to_markdown.sh"
 {{- else if eq $machine "mba13-linux" }}
 alias sshme="ssh -i ~/.ssh/mba13-linux_to_tailnet_ed25519"
 {{- else if eq $machine "mba13-mac" }}
