@@ -158,6 +158,20 @@ different tooling (Application Firewall / `pf` instead of `ufw`).
 
 ## Changelog
 
+- **2026-09-23 — CryptPad live on geekom (office-suite eval, #1 of 3).**
+  First of a 3-way office-suite eval (OnlyOffice, Collabora CODE,
+  CryptPad) — CryptPad first since it needs no companion service.
+  Reachable at `https://6l.seahorse-enigmatic.ts.net:8443/` (main UI)
+  and `:8444/` (sandbox origin, required by CryptPad's own
+  content-isolation model) — two dedicated `tailscale serve` ports, not
+  routed through Caddy. This is also the first real instance of the
+  **port-per-service routing pattern** chosen for all future services,
+  since Tailscale ACLs (still unwritten — see the open
+  `tailscale-ufw-bypass-fix` issue) can only restrict access by
+  `host:port`, not by HTTP path. See `services/cryptpad/README.md` for
+  setup detail and gotchas (host UID 4001 permissions, `CPAD_CONF`,
+  don't bind-mount the whole `config/` dir).
+
 - **2026-08-30 — mba13-mac onboarding complete.** Real AM-tailnet IP
   (`100.71.170.17`) filled into the Machines table; confirmed inbound
   SSH is actually blocked (peer `ssh`/`nc` attempts fail) and Tailscale

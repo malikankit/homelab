@@ -274,7 +274,7 @@
     <h1>What's running on geekom, and how it's reached</h1>
     <div class="status-line">
       <span class="dot" aria-hidden="true"></span>
-      <span>3 containers up · tailscale serve live · Forgejo installed · verified 200&nbsp;OK end-to-end</span>
+      <span>4 containers up · tailscale serve live · Forgejo + CryptPad installed · verified 200&nbsp;OK end-to-end</span>
     </div>
   </header>
 
@@ -320,6 +320,25 @@
       <text class="node-port" x="350" y="404" font-size="12">:2222 git-ssh · 100.78.110.5</text>
       <text class="node-sub" x="350" y="424" font-size="10.5">DISABLE_REGISTRATION=true</text>
 
+      <!-- tailscale serve — cryptpad's two dedicated ports -->
+      <rect class="node-rect" x="660" y="96" width="270" height="66" rx="9"></rect>
+      <text class="node-label" x="680" y="122" font-size="13.5">tailscale serve</text>
+      <text class="node-port" x="680" y="142" font-size="12">https :8443 / :8444</text>
+
+      <!-- cryptpad -->
+      <rect class="node-rect" x="660" y="196" width="270" height="90" rx="9"></rect>
+      <text class="node-label" x="680" y="223" font-size="13.5">cryptpad</text>
+      <text class="node-port" x="680" y="244" font-size="12">:3010 main · 127.0.0.1</text>
+      <text class="node-port" x="680" y="262" font-size="12">:3011 sandbox · 127.0.0.1</text>
+      <text class="node-sub" x="680" y="278" font-size="10.5">own ports — bypasses caddy</text>
+
+      <!-- peers -> cryptpad's tailscale serve (curved, own ports) -->
+      <path class="edge-live" d="M 135,176 C 135,60 500,60 656,129" marker-end="url(#arrow-live)"></path>
+      <text class="edge-label" x="330" y="52" font-size="11">https :8443/:8444 — direct, own tailscale serve ports</text>
+
+      <!-- tailscale serve -> cryptpad -->
+      <line class="edge-live" x1="795" y1="162" x2="795" y2="192" marker-end="url(#arrow-live)"></line>
+
       <!-- dockge -->
       <rect class="node-rect" x="660" y="336" width="250" height="90" rx="9"></rect>
       <text class="node-label" x="680" y="363" font-size="13.5">dockge:1</text>
@@ -358,7 +377,7 @@
       <text class="edge-label" x="800" y="450" font-size="11">docker.sock mount</text>
     </svg>
     <figcaption>
-      Two independent live paths reach Forgejo — the web UI through <span style="font-family:'IBM Plex Mono',monospace">tailscale&nbsp;serve → caddy → :3000</span>, and <span style="font-family:'IBM Plex Mono',monospace">git clone</span> traffic straight to its own SSH port <span style="font-family:'IBM Plex Mono',monospace">:2222</span>, entirely bypassing Caddy. Dockge sits outside both: reachable only from geekom itself or an SSH tunnel, never proxied, because its docker-socket mount gives it root-equivalent control over every container shown here — the same mount is also how Dockge now manages Caddy's and Forgejo's compose stacks from its own UI (via read-only symlinks back into this repo), not just the ability shown by the dashed arrow.
+      Two independent live paths reach Forgejo — the web UI through <span style="font-family:'IBM Plex Mono',monospace">tailscale&nbsp;serve → caddy → :3000</span>, and <span style="font-family:'IBM Plex Mono',monospace">git clone</span> traffic straight to its own SSH port <span style="font-family:'IBM Plex Mono',monospace">:2222</span>, entirely bypassing Caddy. CryptPad gets its own pair of <span style="font-family:'IBM Plex Mono',monospace">tailscale serve</span> ports (<span style="font-family:'IBM Plex Mono',monospace">:8443</span>/<span style="font-family:'IBM Plex Mono',monospace">:8444</span>) rather than going through Caddy — it needs two distinct origins for its own content-isolation model, and this is also the first real instance of the port-per-service pattern chosen so a future Tailscale ACL policy can restrict access per service (ACLs see <span style="font-family:'IBM Plex Mono',monospace">host:port</span>, not HTTP paths). Dockge sits outside all of this: reachable only from geekom itself or an SSH tunnel, never proxied, because its docker-socket mount gives it root-equivalent control over every container shown here — the same mount is also how Dockge now manages every stack from its own UI (via read-only symlinks back into this repo), not just the ability shown by the dashed arrow.
     </figcaption>
   </figure>
 
@@ -400,6 +419,20 @@
           <td class="port">2222</td>
           <td class="mono">100.78.110.5</td>
           <td class="desc">any AM-tailnet device, direct</td>
+          <td><span class="pill live">live</span></td>
+        </tr>
+        <tr>
+          <td>cryptpad — main</td>
+          <td class="port">3010</td>
+          <td class="mono">127.0.0.1</td>
+          <td class="desc">tailscale serve :8443 only</td>
+          <td><span class="pill live">live</span></td>
+        </tr>
+        <tr>
+          <td>cryptpad — sandbox</td>
+          <td class="port">3011</td>
+          <td class="mono">127.0.0.1</td>
+          <td class="desc">tailscale serve :8444 only</td>
           <td><span class="pill live">live</span></td>
         </tr>
         <tr>

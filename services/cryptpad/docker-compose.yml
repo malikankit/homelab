@@ -1,0 +1,26 @@
+services:
+  cryptpad:
+    image: cryptpad/cryptpad:version-2026.5.1
+    container_name: cryptpad
+    restart: unless-stopped
+    environment:
+      # Two distinct origins for CryptPad's own content-isolation model —
+      # "unsafe" (main UI) vs "safe" (sandboxed pad content). Each gets
+      # its own tailscale serve port; see ../../HOMELAB.md.
+      - CPAD_MAIN_DOMAIN=https://6l.seahorse-enigmatic.ts.net:8443
+      - CPAD_SANDBOX_DOMAIN=https://6l.seahorse-enigmatic.ts.net:8444
+      - CPAD_CONF=/cryptpad/config/config.js
+    volumes:
+      - /home/am/services/state/cryptpad/blob:/cryptpad/blob
+      - /home/am/services/state/cryptpad/block:/cryptpad/block
+      - /home/am/services/state/cryptpad/data:/cryptpad/data
+      - /home/am/services/state/cryptpad/files:/cryptpad/datastore
+      - /home/am/services/state/cryptpad/customize:/cryptpad/customize
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      # Host-side 3010/3011 (not 3000/3001) — 3000 is already taken by
+      # Forgejo's web UI on this host. Container-internal ports are
+      # still 3000/3001; tailscale serve points at the host-side ones.
+      - "127.0.0.1:3010:3000"     # main UI — tailscale serve :8443 fronts this
+      - "127.0.0.1:3011:3001"     # sandbox content — tailscale serve :8444 fronts this
