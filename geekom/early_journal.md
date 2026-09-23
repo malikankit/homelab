@@ -1029,6 +1029,56 @@ when tried, so the numeric `AppleKeyboardType` ID itself is still
 unconfirmed. All written up in `mba13/karabiner/README.md` and
 `karabiner/README.md`. Commit: `23189fb`.
 
+## 2026-Sep-23
+
+1. CryptPad live on geekom — first of a 3-way office-suite eval
+
+Planned (in plan mode, with confirmation at each decision point) a
+broader push to self-host more apps beyond Forgejo — an office suite,
+eventually Vaultwarden/Vikunja, and a second, less-trusted user on the
+AM tailnet restricted to specific services only. Landed on: try
+CryptPad, OnlyOffice, and Collabora CODE in practice rather than pick
+from description alone (starting with CryptPad, since it needs no
+companion service); route every future service through its own
+dedicated `tailscale serve` port rather than subdomains (Tailscale only
+certs per-device) or a shared Caddy path (ACLs can't see HTTP paths,
+only `host:port` — this pattern is what makes a future ACL policy
+actually enforceable per service). Also picked, separately: Collabora
+over OnlyOffice on privacy grounds after OnlyOffice's 2026
+mobile-editing `license.dat` licensing episode came up, though CryptPad
+goes first regardless.
+
+Deployed CryptPad (`cryptpad/cryptpad:version-2026.5.1`) at
+`services/cryptpad/`, reachable on `6l.seahorse-enigmatic.ts.net:8443`
+(main) and `:8444` (sandbox — CryptPad's own content-isolation model
+needs two real origins). Hit and fixed, in order: a port clash with
+Forgejo's web UI (both wanted host `3000`); a wrong assumption about a
+second "sandbox port" that doesn't actually exist once a real
+`httpSafeOrigin` is configured (the real second port is for
+websockets, `/cryptpad_websocket`); a missing `CPAD_CONF` env var
+crash-looping the container; a bind-mount of the whole `config/`
+directory that hid the image's own bootstrap file; internal-UID
+permission errors (`chmod 777` used as a workaround, no passwordless
+`sudo` available to `chown` properly); and — the one that actually
+caused the "stuck on loading" symptom — a `customize/application_config.js`
+login-salt file that threw `ReferenceError: AppConfig is not defined`
+because it skipped the RequireJS module wrapper CryptPad's own
+`AppConfig` object needs, copying the docs' example too literally. That
+last one only showed up in the browser's own console — every
+server-side check (`curl` against the page, every asset, a real
+WebSocket upgrade handshake) had already come back clean, which is what
+made it hard to place. Full blow-by-blow, every file and every command,
+in `services/cryptpad_setup_log.md`; condensed "how to run this" in
+`services/cryptpad/README.md`. `HOMELAB.md` and `geekom/service_map.html`
+updated in the same batch. Commit: `c94df0c` (plus the
+`application_config.js` fix, which lives outside the repo in
+`~/services/state/cryptpad/` since it's runtime state, not tracked).
+
+Still open (see `issues/office-suite-eval.md`): confirm the fixed page
+actually loads end-to-end in a real browser, create the admin account,
+lock down registration, then repeat this for OnlyOffice and Collabora
+CODE before picking one for good.
+
 ## Before 2026-Aug-14
 
 

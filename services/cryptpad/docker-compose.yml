@@ -19,8 +19,13 @@ services:
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
     ports:
-      # Host-side 3010/3011 (not 3000/3001) — 3000 is already taken by
-      # Forgejo's web UI on this host. Container-internal ports are
-      # still 3000/3001; tailscale serve points at the host-side ones.
-      - "127.0.0.1:3010:3000"     # main UI — tailscale serve :8443 fronts this
-      - "127.0.0.1:3011:3001"     # sandbox content — tailscale serve :8444 fronts this
+      # Host-side 3010 (not 3000 — already taken by Forgejo's web UI).
+      # IMPORTANT: with httpSafeOrigin set (two real domains/ports for
+      # main+sandbox), CryptPad does NOT listen on a second port for the
+      # sandbox — it's the SAME server on this one port, distinguishing
+      # main vs. sandbox purely by the Host header of the incoming
+      # request. The httpPort+1 (3001) "sandbox port" only exists when
+      # httpSafeOrigin is unset (single-domain dev mode) — do not map
+      # it here, nothing listens on it in this configuration.
+      - "127.0.0.1:3010:3000"     # main app — both :8443 and :8444 tailscale-serve to this
+      - "127.0.0.1:3013:3003"     # websocket — /cryptpad_websocket path on both ports
