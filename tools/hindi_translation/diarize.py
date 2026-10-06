@@ -119,6 +119,7 @@ def check_disk_space_or_abort(target_dir: Path, estimated_bytes: int) -> None:
 
 def run_diarization(audio_path: Path, num_speakers: int | None):
     from pyannote.audio import Pipeline
+    from pyannote.audio.pipelines.utils.hook import ProgressHook
     import torch
 
     pipeline = Pipeline.from_pretrained(PYANNOTE_MODEL)
@@ -128,15 +129,36 @@ def run_diarization(audio_path: Path, num_speakers: int | None):
     kwargs = {}
     if num_speakers is not None:
         kwargs["num_speakers"] = num_speakers
-    return pipeline(str(audio_path), **kwargs)
+
+    # Unlike hinglish_transcribe.py's per-chunk loop, pyannote's pipeline
+    # call is otherwise a black box -- ProgressHook surfaces its actual
+    # named stages (segmentation, embedding, clustering, ...) as they run,
+    # instead of one long silent wait.
+    with ProgressHook() as hook:
+        return pipeline(str(audio_path), hook=hook, **kwargs)
 
 
-def merge_with_segments(diarization, segments: list[dict]) -> list[dict]:
+def merge_with_segments(diarize_output, segments: list[dict]) -> list[dict]:
     """For each ASR chunk (start/end/text from hinglish_transcribe.py's
     segments.json), find the dominant diarized speaker within that window
     by summed overlap duration. See choice #2 in the module docstring.
+
+    Verified 2026-09-04 (previously UNTESTED, and the first version got
+    this wrong): pyannote.audio 4.x's pipeline call returns a
+    `DiarizeOutput` dataclass, not a plain `Annotation` -- calling
+    `.crop()` directly on it raised `AttributeError`. The actual
+    `Annotation` objects live on two fields: `speaker_diarization` (raw,
+    can contain overlapping turns when multiple people talk at once) and
+    `exclusive_speaker_diarization` (pyannote's own words: "adapted to
+    downstream transcription... does not contain overlapping speech
+    turns"). Using the exclusive version here -- it's explicitly the one
+    meant for exactly this kind of ASR-alignment use case, and avoids
+    double-counting overlap seconds across two simultaneously-active
+    speaker tracks.
     """
     from pyannote.core import Segment
+
+    annotation = diarize_output.exclusive_speaker_diarization
 
     merged = []
     for seg in segments:
@@ -144,7 +166,7 @@ def merge_with_segments(diarization, segments: list[dict]) -> list[dict]:
         # mode="intersection" (pyannote's default) clips each returned
         # track to the cropping window, so turn.duration after crop is
         # already the overlap duration -- no manual intersection needed.
-        cropped = diarization.crop(window, mode="intersection")
+        cropped = annotation.crop(window, mode="intersection")
 
         durations: dict[str, float] = {}
         for turn, _, speaker in cropped.itertracks(yield_label=True):
@@ -171,14 +193,16 @@ def merge_with_segments(diarization, segments: list[dict]) -> list[dict]:
     return merged
 
 
-def raw_diarization_turns(diarization) -> list[dict]:
-    """The unmerged diarization output -- every turn pyannote found,
-    independent of ASR chunk boundaries. Written alongside the merged
-    output for debugging or a future finer-grained merge pass.
+def raw_diarization_turns(diarize_output) -> list[dict]:
+    """The unmerged diarization output (exclusive/non-overlapping turns,
+    same field merge_with_segments() uses) -- independent of ASR chunk
+    boundaries. Written alongside the merged output for debugging or a
+    future finer-grained merge pass.
     """
+    annotation = diarize_output.exclusive_speaker_diarization
     return [
         {"start": round(turn.start, 2), "end": round(turn.end, 2), "speaker": speaker}
-        for turn, _, speaker in diarization.itertracks(yield_label=True)
+        for turn, _, speaker in annotation.itertracks(yield_label=True)
     ]
 
 

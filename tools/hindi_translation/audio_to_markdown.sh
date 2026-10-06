@@ -5,8 +5,17 @@
 #
 # Usage:
 #   audio_to_markdown.sh <audio_file> [--num-speakers N] [--mode mixedcode|hindi] [--style casual|formal] [-y|--yes]
+#   audio_to_markdown.sh <audio_file> --english [--num-speakers N] [-y|--yes]
 #
 # Defaults: 2 speakers, mixedcode mode, casual transliteration style.
+#
+# --english switches to mostly_english_transcribe.py (base
+# whisper-large-v3-turbo, forces <|en|> instead of Tara's <|hi|>/<|mc|>)
+# for English-dominant audio with only occasional Hindi/Hinglish -- see
+# ../../issues/english-dominant-audio-transcription-model.md for why
+# Tara is a poor fit for that direction. Also skips the transliteration
+# step entirely (nothing to romanize -- output is already English) and
+# ignores --mode/--style, which are Hinglish-pipeline-specific.
 #
 # Shows the plan (steps, options, a rough time estimate from the audio's
 # own duration) and asks for confirmation before doing anything, unless
@@ -38,6 +47,7 @@ TRANSCRIPTS_ROOT="${TRANSCRIPTS_ROOT:-$HOME/transcripts/with_timestamps}"
 NUM_SPEAKERS=2
 MODE="mixedcode"
 STYLE="casual"
+ENGLISH=0
 ASSUME_YES=0
 AUDIO_FILE=""
 
@@ -54,6 +64,10 @@ while [[ $# -gt 0 ]]; do
     --style)
       STYLE="$2"
       shift 2
+      ;;
+    --english)
+      ENGLISH=1
+      shift
       ;;
     -y|--yes)
       ASSUME_YES=1
@@ -114,13 +128,21 @@ if [[ "${AUDIO_TO_MARKDOWN_CHILD:-0}" != "1" ]]; then
   echo "Audio file:     $AUDIO_FILE"
   echo "Audio duration: ${DURATION_MIN_DISPLAY} min"
   echo "Output folder:  $OUT_DIR"
-  echo "Options:        num_speakers=$NUM_SPEAKERS mode=$MODE style=$STYLE"
   echo "Steps:"
-  echo "  0. Convert to WAV (if needed)"
-  echo "  1. Transcribe (timestamped)"
-  echo "  2. Diarize (num_speakers=$NUM_SPEAKERS)"
-  echo "  3. Transliterate (Roman script, style=$STYLE)"
-  echo "  4. Format as Markdown"
+  if [[ "$ENGLISH" == "1" ]]; then
+    echo "Options:        english mode, num_speakers=$NUM_SPEAKERS"
+    echo "  0. Convert to WAV (if needed)"
+    echo "  1. Transcribe (English, whisper-large-v3-turbo)"
+    echo "  2. Diarize (num_speakers=$NUM_SPEAKERS)"
+    echo "  3. Format as Markdown"
+  else
+    echo "Options:        num_speakers=$NUM_SPEAKERS mode=$MODE style=$STYLE"
+    echo "  0. Convert to WAV (if needed)"
+    echo "  1. Transcribe (timestamped)"
+    echo "  2. Diarize (num_speakers=$NUM_SPEAKERS)"
+    echo "  3. Transliterate (Roman script, style=$STYLE)"
+    echo "  4. Format as Markdown"
+  fi
   echo "Rough time estimate: ~${EST_MINUTES} min total (CPU-only, no GPU on this machine -- see RUNBOOK.md; this is a rough guess from one benchmark, not a guarantee)."
   echo
 
@@ -136,8 +158,12 @@ if [[ "${AUDIO_TO_MARKDOWN_CHILD:-0}" != "1" ]]; then
   echo "Watch progress: tail -f \"$LOG_FILE\""
   echo "Or just check back later (re-run this command, or the web UI once built) -- it looks for the finished .md, no live tracking needed."
 
+  ENGLISH_FLAG=()
+  if [[ "$ENGLISH" == "1" ]]; then
+    ENGLISH_FLAG=(--english)
+  fi
   AUDIO_TO_MARKDOWN_CHILD=1 nohup "$0" "$AUDIO_FILE" \
-    --num-speakers "$NUM_SPEAKERS" --mode "$MODE" --style "$STYLE" --yes \
+    --num-speakers "$NUM_SPEAKERS" --mode "$MODE" --style "$STYLE" "${ENGLISH_FLAG[@]}" --yes \
     > "$LOG_FILE" 2>&1 &
   disown
   echo "Started -- PID $!"
@@ -146,7 +172,13 @@ fi
 
 echo "=== audio_to_markdown: $STEM ==="
 echo "Output folder: $OUT_DIR"
-echo "Options: num_speakers=$NUM_SPEAKERS mode=$MODE style=$STYLE"
+if [[ "$ENGLISH" == "1" ]]; then
+  echo "Options: english mode, num_speakers=$NUM_SPEAKERS"
+  TOTAL_STEPS=3
+else
+  echo "Options: num_speakers=$NUM_SPEAKERS mode=$MODE style=$STYLE"
+  TOTAL_STEPS=4
+fi
 echo
 
 cd "$SCRIPT_DIR"
@@ -157,37 +189,49 @@ source hf-env/bin/activate
 EXT="${AUDIO_FILE##*.}"
 EXT_LOWER="$(echo "$EXT" | tr '[:upper:]' '[:lower:]')"
 if [[ "$EXT_LOWER" != "wav" ]]; then
-  echo "--- Step 0/4: converting to WAV ---"
+  echo "--- Step 0/$TOTAL_STEPS: converting to WAV ---"
   WAV_FILE="$OUT_DIR/$STEM.wav"
   ffmpeg -y -i "$AUDIO_FILE" -ar 16000 -ac 1 "$WAV_FILE" -loglevel error
 else
   WAV_FILE="$AUDIO_FILE"
 fi
 
-# Step 1: transcribe (timestamps are hinglish_transcribe.py's default)
-echo "--- Step 1/4: transcribing ---"
+# Step 1: transcribe (timestamps are the default in both transcribe scripts)
+echo "--- Step 1/$TOTAL_STEPS: transcribing ---"
 TRANSCRIPT_TXT="$OUT_DIR/$STEM.transcribed-timestamped.txt"
 PROFILE_TXT="$OUT_DIR/$STEM.transcribed-timestamped.profile.txt"
-python3 hinglish_transcribe.py "$WAV_FILE" --mode "$MODE" \
-  -o "$TRANSCRIPT_TXT" --profile --profile-output "$PROFILE_TXT"
+if [[ "$ENGLISH" == "1" ]]; then
+  python3 mostly_english_transcribe.py "$WAV_FILE" \
+    -o "$TRANSCRIPT_TXT" --profile --profile-output "$PROFILE_TXT"
+else
+  python3 hinglish_transcribe.py "$WAV_FILE" --mode "$MODE" \
+    -o "$TRANSCRIPT_TXT" --profile --profile-output "$PROFILE_TXT"
+fi
 SEGMENTS_JSON="${TRANSCRIPT_TXT%.txt}.segments.json"
 
 # Step 2: diarize
-echo "--- Step 2/4: diarizing (num_speakers=$NUM_SPEAKERS) ---"
+echo "--- Step 2/$TOTAL_STEPS: diarizing (num_speakers=$NUM_SPEAKERS) ---"
 DIARIZED_TXT="$OUT_DIR/$STEM.diarized-pyannote.txt"
 python3 diarize.py "$WAV_FILE" "$SEGMENTS_JSON" \
   --num-speakers "$NUM_SPEAKERS" -o "$DIARIZED_TXT"
 
-# Step 3: transliterate (rule-based + schwa-deletion/diacritic-folding
-# cleanup, both bundled into --style casual)
-echo "--- Step 3/4: transliterating (style=$STYLE) ---"
-TRANSLIT_TXT="$OUT_DIR/$STEM.diarized-pyannote.transliterated-rule_$STYLE.txt"
-python3 transliterate.py "$DIARIZED_TXT" --style "$STYLE" -o "$TRANSLIT_TXT"
+if [[ "$ENGLISH" == "1" ]]; then
+  # No transliteration step -- output is already English, nothing to
+  # romanize (see the --english note at the top of this script).
+  FORMAT_INPUT="$DIARIZED_TXT"
+else
+  # Step 3: transliterate (rule-based + schwa-deletion/diacritic-folding
+  # cleanup, both bundled into --style casual)
+  echo "--- Step 3/$TOTAL_STEPS: transliterating (style=$STYLE) ---"
+  TRANSLIT_TXT="$OUT_DIR/$STEM.diarized-pyannote.transliterated-rule_$STYLE.txt"
+  python3 transliterate.py "$DIARIZED_TXT" --style "$STYLE" -o "$TRANSLIT_TXT"
+  FORMAT_INPUT="$TRANSLIT_TXT"
+fi
 
-# Step 4: final markdown formatting
-echo "--- Step 4/4: formatting markdown ---"
+# Final step: markdown formatting
+echo "--- Step $TOTAL_STEPS/$TOTAL_STEPS: formatting markdown ---"
 FINAL_MD="$OUT_DIR/$STEM.md"
-python3 format_markdown.py "$TRANSLIT_TXT" -o "$FINAL_MD"
+python3 format_markdown.py "$FORMAT_INPUT" -o "$FINAL_MD"
 
 echo
 echo "=== Done ==="
