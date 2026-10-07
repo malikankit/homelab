@@ -33,6 +33,10 @@
 # diarized text + raw turns, transliterated text, final markdown) are
 # kept together in one per-recording folder:
 #   ~/transcripts/with_timestamps/<audio-stem>/
+# <audio-stem> has spaces replaced with dashes, even if the original
+# filename had them -- easier to `ls`/tab-complete, no quoting needed.
+# A text-only copy (no .wav) of that folder is also placed at:
+#   ~/code/files-from-mac/transcript-outputs/with_timestamps/<audio-stem>/
 #
 # Not done here, deliberately (v1, see tools/hindi_translation/README.md
 # / the homelab issues/ tracker for the follow-up): no idempotency --
@@ -43,6 +47,10 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TRANSCRIPTS_ROOT="${TRANSCRIPTS_ROOT:-$HOME/transcripts/with_timestamps}"
+# Text-only copy of every run's outputs, kept alongside the original
+# source audio on the Mac-synced side -- so the Mac has the readable
+# artifacts without the multi-hundred-MB .wav duplicated everywhere.
+COPY_ROOT="${COPY_ROOT:-$HOME/code/files-from-mac/transcript-outputs/with_timestamps}"
 
 NUM_SPEAKERS=2
 MODE="mixedcode"
@@ -101,6 +109,11 @@ fi
 AUDIO_FILE="$(readlink -f "$AUDIO_FILE")"
 STEM="$(basename "$AUDIO_FILE")"
 STEM="${STEM%.*}"
+# Spaces in a stem make every downstream path need quoting and are a
+# pain to `ls`/tab-complete through -- replace with dashes once, here,
+# so every artifact this run produces (folder + every output filename,
+# since they're all built from $STEM) is clean from the start.
+STEM="${STEM// /-}"
 
 OUT_DIR="$TRANSCRIPTS_ROOT/$STEM"
 mkdir -p "$OUT_DIR"
@@ -234,6 +247,14 @@ FINAL_MD="$OUT_DIR/$STEM.md"
 python3 format_markdown.py "$FORMAT_INPUT" -o "$FINAL_MD"
 
 echo
+echo "--- Copying text outputs to $COPY_ROOT/$STEM/ ---"
+COPY_DIR="$COPY_ROOT/$STEM"
+mkdir -p "$COPY_DIR"
+find "$OUT_DIR" -maxdepth 1 -type f \( -name "*.md" -o -name "*.txt" -o -name "*.json" -o -name "*.log" \) \
+  -exec cp -p {} "$COPY_DIR/" \;
+
+echo
 echo "=== Done ==="
 echo "Final markdown: $FINAL_MD"
 echo "All artifacts:  $OUT_DIR/"
+echo "Text copy:      $COPY_DIR/"
