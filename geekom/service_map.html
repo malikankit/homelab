@@ -274,12 +274,12 @@
     <h1>What's running on geekom, and how it's reached</h1>
     <div class="status-line">
       <span class="dot" aria-hidden="true"></span>
-      <span>4 containers up · tailscale serve live · Forgejo + CryptPad installed · verified 200&nbsp;OK end-to-end</span>
+      <span>5 containers up · tailscale serve live · Forgejo + CryptPad + Vikunja installed · verified 200&nbsp;OK end-to-end</span>
     </div>
   </header>
 
   <figure>
-    <svg viewBox="0 0 1180 760" role="img" aria-label="Diagram showing AM-tailnet peers reaching Forgejo's web UI through tailscale serve and Caddy, or its git-SSH port directly on 2222; a local or SSH-tunneled user reaching Dockge's admin UI on port 5001 directly; and Dockge separately holding root-equivalent control over every container via a mounted docker.sock.">
+    <svg viewBox="0 0 1180 800" role="img" aria-label="Diagram showing AM-tailnet peers reaching Forgejo's web UI through tailscale serve and Caddy, or its git-SSH port directly on 2222; peers reaching CryptPad and Vikunja each through their own dedicated tailscale serve ports; a local or SSH-tunneled user reaching Dockge's admin UI on port 5001 directly; and Dockge separately holding root-equivalent control over every container via a mounted docker.sock.">
       <defs>
         <marker id="arrow-live" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
           <path d="M0,0 L10,5 L0,10 z" style="fill: var(--accent-live)"></path>
@@ -300,7 +300,7 @@
       <text class="node-sub" x="135" y="588" text-anchor="middle" font-size="10.5">geekom desktop, or ssh -L</text>
 
       <!-- Host boundary -->
-      <rect class="host-boundary" x="290" y="40" width="860" height="670" rx="14"></rect>
+      <rect class="host-boundary" x="290" y="40" width="860" height="710" rx="14"></rect>
       <text class="boundary-label" x="314" y="66" font-size="11.5">geekom · 100.78.110.5 · 6l.seahorse-enigmatic.ts.net</text>
 
       <!-- tailscale serve -->
@@ -339,16 +339,34 @@
       <!-- tailscale serve -> cryptpad -->
       <line class="edge-live" x1="795" y1="162" x2="795" y2="192" marker-end="url(#arrow-live)"></line>
 
+      <!-- tailscale serve — vikunja's own dedicated port -->
+      <rect class="node-rect" x="660" y="316" width="270" height="66" rx="9"></rect>
+      <text class="node-label" x="680" y="342" font-size="13.5">tailscale serve</text>
+      <text class="node-port" x="680" y="362" font-size="12">https :8445</text>
+
+      <!-- vikunja -->
+      <rect class="node-rect" x="660" y="416" width="270" height="90" rx="9"></rect>
+      <text class="node-label" x="680" y="443" font-size="13.5">vikunja</text>
+      <text class="node-port" x="680" y="464" font-size="12">:3456 · 127.0.0.1</text>
+      <text class="node-sub" x="680" y="484" font-size="10.5">sqlite · own port — bypasses caddy</text>
+
+      <!-- peers -> vikunja's tailscale serve (curved, own port) -->
+      <path class="edge-live" d="M 135,176 C 135,250 500,250 656,349" marker-end="url(#arrow-live)"></path>
+      <text class="edge-label" x="330" y="256" font-size="11">https :8445 — direct, own tailscale serve port</text>
+
+      <!-- tailscale serve -> vikunja -->
+      <line class="edge-live" x1="795" y1="382" x2="795" y2="412" marker-end="url(#arrow-live)"></line>
+
       <!-- dockge -->
-      <rect class="node-rect" x="660" y="336" width="250" height="90" rx="9"></rect>
-      <text class="node-label" x="680" y="363" font-size="13.5">dockge:1</text>
-      <text class="node-port" x="680" y="384" font-size="12">:5001 · 127.0.0.1 only</text>
-      <text class="node-sub" x="680" y="404" font-size="10.5">manages caddy + forgejo stacks too</text>
+      <rect class="node-rect" x="660" y="536" width="250" height="90" rx="9"></rect>
+      <text class="node-label" x="680" y="563" font-size="13.5">dockge:1</text>
+      <text class="node-port" x="680" y="584" font-size="12">:5001 · 127.0.0.1 only</text>
+      <text class="node-sub" x="680" y="604" font-size="10.5">manages caddy + forgejo + vikunja stacks too</text>
 
       <!-- docker engine -->
-      <rect class="node-rect" x="660" y="466" width="250" height="66" rx="9"></rect>
-      <text class="node-label" x="680" y="492" font-size="13.5">Docker Engine</text>
-      <text class="node-sub" x="680" y="512" font-size="10.5">/var/run/docker.sock</text>
+      <rect class="node-rect" x="660" y="666" width="250" height="66" rx="9"></rect>
+      <text class="node-label" x="680" y="692" font-size="13.5">Docker Engine</text>
+      <text class="node-sub" x="680" y="712" font-size="10.5">/var/run/docker.sock</text>
 
       <!-- edges: peers -> tailscale serve -->
       <line class="edge-live" x1="240" y1="129" x2="326" y2="129" marker-end="url(#arrow-live)"></line>
@@ -368,16 +386,16 @@
       <text class="edge-label" x="150" y="314" font-size="11">bypasses caddy</text>
 
       <!-- you -> dockge -->
-      <path class="edge-live" d="M 240,570 C 420,570 500,470 656,390" marker-end="url(#arrow-live)"></path>
+      <path class="edge-live" d="M 240,570 C 420,570 500,560 656,581" marker-end="url(#arrow-live)"></path>
       <text class="edge-label" x="330" y="562" font-size="11">ssh -L 5001:localhost:5001,</text>
       <text class="edge-label" x="330" y="576" font-size="11">or local browser</text>
 
       <!-- dockge -> docker engine (control plane) -->
-      <line class="edge-control" x1="785" y1="426" x2="785" y2="462" marker-end="url(#arrow-control)"></line>
-      <text class="edge-label" x="800" y="450" font-size="11">docker.sock mount</text>
+      <line class="edge-control" x1="785" y1="626" x2="785" y2="662" marker-end="url(#arrow-control)"></line>
+      <text class="edge-label" x="800" y="650" font-size="11">docker.sock mount</text>
     </svg>
     <figcaption>
-      Two independent live paths reach Forgejo — the web UI through <span style="font-family:'IBM Plex Mono',monospace">tailscale&nbsp;serve → caddy → :3000</span>, and <span style="font-family:'IBM Plex Mono',monospace">git clone</span> traffic straight to its own SSH port <span style="font-family:'IBM Plex Mono',monospace">:2222</span>, entirely bypassing Caddy. CryptPad gets its own pair of <span style="font-family:'IBM Plex Mono',monospace">tailscale serve</span> ports (<span style="font-family:'IBM Plex Mono',monospace">:8443</span>/<span style="font-family:'IBM Plex Mono',monospace">:8444</span>) rather than going through Caddy — it needs two distinct origins for its own content-isolation model, and this is also the first real instance of the port-per-service pattern chosen so a future Tailscale ACL policy can restrict access per service (ACLs see <span style="font-family:'IBM Plex Mono',monospace">host:port</span>, not HTTP paths). Dockge sits outside all of this: reachable only from geekom itself or an SSH tunnel, never proxied, because its docker-socket mount gives it root-equivalent control over every container shown here — the same mount is also how Dockge now manages every stack from its own UI (via read-only symlinks back into this repo), not just the ability shown by the dashed arrow.
+      Two independent live paths reach Forgejo — the web UI through <span style="font-family:'IBM Plex Mono',monospace">tailscale&nbsp;serve → caddy → :3000</span>, and <span style="font-family:'IBM Plex Mono',monospace">git clone</span> traffic straight to its own SSH port <span style="font-family:'IBM Plex Mono',monospace">:2222</span>, entirely bypassing Caddy. CryptPad gets its own pair of <span style="font-family:'IBM Plex Mono',monospace">tailscale serve</span> ports (<span style="font-family:'IBM Plex Mono',monospace">:8443</span>/<span style="font-family:'IBM Plex Mono',monospace">:8444</span>) rather than going through Caddy — it needs two distinct origins for its own content-isolation model. Vikunja likewise gets its own dedicated port (<span style="font-family:'IBM Plex Mono',monospace">:8445</span>) rather than a Caddy path — its standard Docker image doesn't support being served from a subdirectory without a custom frontend build, so a dedicated origin was simpler than maintaining one. This port-per-service pattern also means a future Tailscale ACL policy can restrict access per service (ACLs see <span style="font-family:'IBM Plex Mono',monospace">host:port</span>, not HTTP paths). Dockge sits outside all of this: reachable only from geekom itself or an SSH tunnel, never proxied, because its docker-socket mount gives it root-equivalent control over every container shown here — the same mount is also how Dockge now manages every stack from its own UI (via read-only symlinks back into this repo), not just the ability shown by the dashed arrow.
     </figcaption>
   </figure>
 
@@ -433,6 +451,13 @@
           <td class="port">3011</td>
           <td class="mono">127.0.0.1</td>
           <td class="desc">tailscale serve :8444 only</td>
+          <td><span class="pill live">live</span></td>
+        </tr>
+        <tr>
+          <td>vikunja</td>
+          <td class="port">3456</td>
+          <td class="mono">127.0.0.1</td>
+          <td class="desc">tailscale serve :8445 only</td>
           <td><span class="pill live">live</span></td>
         </tr>
         <tr>

@@ -1,0 +1,33 @@
+services:
+  vikunja:
+    image: vikunja/vikunja
+    container_name: vikunja
+    restart: unless-stopped
+    environment:
+      - VIKUNJA_SERVICE_PUBLICURL=https://6l.seahorse-enigmatic.ts.net:8445/
+      # Default DB is SQLite when VIKUNJA_DATABASE_TYPE is omitted --
+      # single-user/small-household install, no need for a separate
+      # database container on this box.
+      - VIKUNJA_DATABASE_PATH=/db/vikunja.db
+      # Same posture as Forgejo's DISABLE_REGISTRATION -- this instance
+      # is for the household, not open signup.
+      - VIKUNJA_SERVICE_ENABLEREGISTRATION=false
+    env_file:
+      # Lives outside the repo on purpose -- see ../../.gitignore's note
+      # that all runtime state/secrets live under ~/services/state/, not
+      # here. Generated once with `openssl rand -hex 32`.
+      - /home/am/services/state/vikunja/secret.env
+    volumes:
+      - /home/am/services/state/vikunja/files:/app/vikunja/files
+      - /home/am/services/state/vikunja/db:/db
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      # localhost only -- tailscale serve fronts this on its own
+      # dedicated port (8445), same exposure pattern as CryptPad
+      # (:8443/:8444). Not routed through Caddy: Vikunja's own docs say
+      # running it from a subdirectory "is not supported out of the box"
+      # -- it needs a custom frontend build (VIKUNJA_FRONTEND_BASE at
+      # build time) and a custom API binary, not just a reverse-proxy
+      # rule. See README.md in this folder for the full reasoning.
+      - "127.0.0.1:3456:3456"
